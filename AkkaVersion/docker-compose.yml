@@ -1,0 +1,48 @@
+version: "3"
+
+services:
+  kvs-server-seed:
+    # hostname is needed to define a known docker hostname that is used as the seed hostname.
+    hostname: kvs-server-seed
+    build: .
+    image: kvs-server
+    ports:
+      - "8080:8080/tcp"
+      - "25520:25520/tcp"
+    environment:
+      TZ: 'Europe/Paris'
+    entrypoint: "/usr/local/openjdk-11/bin/java -jar kvsServer.jar"
+    command: ["-p", "25520", "-s", "\"akka://KVSSystem@kvs-server-seed:25520\"", "-l", "8080"]
+
+  kvs-server:
+    build: .
+    image: kvs-server
+    depends_on:
+      - kvs-server-seed
+#    ports:
+#      - "8081:8080/tcp"
+#      - "25521:25520/tcp"
+    environment:
+      TZ: 'Europe/Paris'
+    deploy:
+      mode: replicated
+      replicas: 3
+    entrypoint: "/usr/local/openjdk-11/bin/java -jar kvsServer.jar"
+    command: ["-p", "25521", "-s", "\"akka://KVSSystem@kvs-server-seed:25520\"", "-l", "8080"]
+
+  prometheus:
+    container_name: prometheus
+    image: bitnami/prometheus
+    ports:
+      - "9090:9090/tcp"
+    volumes:
+    - ./docker/prometheus-persistence:/opt/bitnami/prometheus/data
+    - ./docker/prometheus.yml:/opt/bitnami/prometheus/conf/prometheus.yml
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:8.0.0
+    ports:
+      - "3000:3000/tcp"
+    volumes:
+      - ./docker/grafana-persistence:/var/lib/grafana
