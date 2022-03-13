@@ -44,7 +44,7 @@ public class Client extends Thread implements KVSClient {
     }
 
 
-    public void put(String key, int value){
+    public void effect(String key, int value){
         checkArgument(tr != null, "Transaction not started");
         tr.put(key, value);
     }
@@ -58,13 +58,18 @@ public class Client extends Thread implements KVSClient {
         checkArgument(tr != null, "Transaction not started");
         if (tr.getOperations().isEmpty()){
             System.out.println("Nothing to commit");
-            return null;
+            tr = null;
+            return lastTransactionID;
         } else {
             kvs.commitTransaction(tr);
             lastTransactionID = tr.getId();
             tr = null;
             return lastTransactionID;
         }
+    }
+
+    public Boolean isRunning(){
+        return  (tr !=null);
     }
 
     public void abort() {

@@ -48,7 +48,7 @@ public class Client extends Thread implements KVSClient {
         }
     }
 
-    public void put(String key, int value){
+    public void effect(String key, int value){
         assert (tr != null);
         tr.put(key, value);
     }

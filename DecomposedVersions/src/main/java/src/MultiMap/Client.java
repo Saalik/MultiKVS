@@ -43,7 +43,7 @@ public class Client extends Thread implements KVSClient {
 
 
     @Override
-    public void put(String key, int value){
+    public void effect(String key, int value){
         checkArgument(tr != null, "Transaction not started");
         tr.put(key, value);
     }

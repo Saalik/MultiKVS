@@ -1,14 +1,16 @@
 package MultiMap;
 
+import Journal.Client;
+import Journal.KeyValueStore;
 import Types.TransactionID;
 
 public class TestClient {
     public static void main(String[] args) {
-        KeyValueStore kvs = new KeyValueStore();
-        Client client = new Client(kvs);
-        TransactionID dependency1 = new TransactionID("");
-        TransactionID dependency2 = new TransactionID("");
-        TransactionID dependency3 = new TransactionID("");
+        Journal.KeyValueStore kvs = new KeyValueStore();
+        Journal.Client client = new Client(kvs);
+        TransactionID dependency1;
+        TransactionID dependency2;
+        TransactionID dependency3;
         int key1 = 1;
         int key2 = 2;
         int key3 = 3;
@@ -16,9 +18,9 @@ public class TestClient {
 
         System.out.println("Test 1: Add a key-value pair");
         client.startTransaction();
-        client.put("key1", 1);
-        client.put("key2", 2);
-        client.put("key3", 3);
+        client.effect("key1", 1);
+        client.effect("key2", 2);
+        client.effect("key3", 3);
         assertEqual(client.get("key1"), key1);
         assertEqual(client.get("key2"), key2);
         assertEqual(client.get("key3"), key3);
@@ -30,7 +32,7 @@ public class TestClient {
         client.startTransaction();
         assertEqual(client.get("key1"), key1);
         key1 += 4;
-        client.put("key1", 4);
+        client.effect("key1", 4);
         assertEqual(client.get("key1"), key1);
         assertEqual(client.get("key2"), key2);
         assertEqual(client.get("key3"), key3);
@@ -42,7 +44,7 @@ public class TestClient {
         client.startTransaction();
         assertEqual(client.get("key1"), key1);
         key1 += 4;
-        client.put("key1", 4);
+        client.effect("key1", 4);
         assertEqual(client.get("key1"), key1);
         assertEqual(client.get("key2"), key2);
         assertEqual(client.get("key3"), key3);
@@ -60,7 +62,7 @@ public class TestClient {
             e.printStackTrace();
         }
 
-        System.out.println("Journal: Test finished");
+        System.out.println("Multimap: Test finished");
 
     }
 

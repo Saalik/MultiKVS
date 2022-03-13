@@ -17,9 +17,9 @@ public class TestClient {
 
         System.out.println("Test 1: Add a key-value pair");
         client.startTransaction();
-        client.put("key1", 1);
-        client.put("key2", 2);
-        client.put("key3", 3);
+        client.effect("key1", 1);
+        client.effect("key2", 2);
+        client.effect("key3", 3);
         assertEqual(client.get("key1"), key1);
         assertEqual(client.get("key2"), key2);
         assertEqual(client.get("key3"), key3);
@@ -31,7 +31,7 @@ public class TestClient {
         client.startTransaction();
         assertEqual(client.get("key1"), key1);
         key1 += 4;
-        client.put("key1", 4);
+        client.effect("key1", 4);
         assertEqual(client.get("key1"), key1);
         assertEqual(client.get("key2"), key2);
         assertEqual(client.get("key3"), key3);
@@ -43,7 +43,7 @@ public class TestClient {
         client.startTransaction();
         assertEqual(client.get("key1"), key1);
         key1 += 4;
-        client.put("key1", 4);
+        client.effect("key1", 4);
         assertEqual(client.get("key1"), key1);
         assertEqual(client.get("key2"), key2);
         assertEqual(client.get("key3"), key3);
