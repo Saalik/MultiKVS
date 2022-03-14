@@ -1,0 +1,312 @@
+%===========================================================
+%                              Choix de thématique
+%===========================================================
+% Une des quatre options 'parallelisme', 'architecture', 'systeme' 
+% 'tempsreel' doit être utilisée avec le style compas2021
+\documentclass[parallelisme]{compas2022}
+
+%===========================================================
+%                               Title
+%===========================================================
+
+\toappear{1} % Conserver cette ligne pour la version finale
+
+\begin{document}
+
+\title{TCC}
+\shorttitle{TCC}
+
+\author{Saalik Hatia}%
+
+\address{Université Pierre et Marie Curie\\
+Laboratoire LIP6 \\
+4, place jussieu\\
+75005 Paris - France\\
+saalik.hatia@lip6.fr}
+
+\date{\today}
+
+\maketitle
+
+%===========================================================         %
+%R\'esum\'e
+%===========================================================  
+\begin{abstract}
+  Le fichier fonctionne en \LaTeXe. La taille
+  de ce résumé peut atteindre une dizaine de lignes.
+  \MotsCles{un maximum de 5 mots significatifs, en français, doivent être 
+    isolés sous forme de mots-clés.}
+\end{abstract}
+
+
+%=========================================================
+\section{Introduction}
+%=========================================================
+
+Modern planet-scale applications increasingly use database to provide users with fast, available and consistent data.
+Developpers use these databases with complex backends to build fast and reliable applications.
+Ideally we want databases to have fast writes and fast reads.
+Fast writes are achieved using a journal; where newly written data is appended in a write only sequential log.
+And fast read are achieved using a cache, where recently used version are stored in fast random access memory.
+
+It is hard to achieve both, keeping everything in memory, or at least using memory as a first layer might cause data loss if there is a crash.
+Similarly a journal is ideal if we think about data persistence, but reading through a sequential log can lead to high read latency.
+
+Most databases, are build with these ideas in mind and have three major components that interact with each other:
+\begin{itemize}
+  \item Cache
+  \item Version store
+  \item Journal
+\end{itemize}
+
+If the database is geo distributed, there might be a replication layer.
+
+To simplify our reasonning this work will not talk about the caching layer.
+
+This paper present our work of formilising the behavior and  interaction between different component of a typical database.
+We start from an intuitive version of a database, an in memory key-value store that store object versions.
+We formalize the application programming interface (API) of that components and the effects each API has on the overall system.
+From these we add new components aiming to achieve similar features to a real world database.
+
+We adopt a stepwise approach.
+The initial step studies a simplistic concurrent database system; we describe its key invariants, formalize an operational semantics, and provide a reference implementation.
+Each following step adds a single feature.
+We formalize the feature and show experimentally that the improved system simulates the simpler one.
+This allows our final design to provide users with consistency guarantees while having an efficient backend in case of a recovery.
+We claim to provide developers with a clear model that allows them to implement a correct and available database with features suited to their requirements.
+
+
+
+% They expect their data to be consistency while remaining available.
+% If a network partition or a crash were to occur they except being able to continue their work while disconnect and data to be safely merged and recovered.
+% <!-- The majority of database use transactions to provide developpers with a simple and reliable way to interact with their data. -->
+% Journaling, materializing, checkpointing, truncation and recovery are well-known mechanisms that can be used to maintain speed and consistency.
+% Their interplay is known to be tricky and their implementation if often obscur.
+% This leads to situation where a developper doesn't know what to expect just based on the different mechanisms used to implement t
+% We wrote a formal model, came up with some simple design and we show through comparaison that this is true.
+
+% Developpers use complicated backend to build their applications. 
+
+%=========================================================
+\section{Transaction and snapshots}
+%=========================================================
+
+
+Transactions are used in most modern database as a mean to execute multiple reads and writes operation.
+Transactions are a set operation, reads and writes, that are terminated by an abort or a commit.
+Operations are either reads which are read from a snapshot called \emph{Dependency Snapshot} defined at that start of the transaction or writes that have an effect on said snapshot. Add determinism to the transaction.
+Visibility of these operations are defined by the consistency model used in the database.
+
+
+\subsection{Transaction}
+
+A transaction is represented using the following information:
+\begin{itemize}
+\item $\tau_i$ Unique transaction identifier.
+\item $Dt$ Dependency timestamp which represent a snapshot the transaction will interact with.
+\item $\varepsilon$ Effect map contains the writes made by the transactions.
+\item $R$ Read set which records the keys of objects read by the transaction.
+\item $Ct$ a commit timestamp that represent the time at which the timestamp has been committed.
+\item $State$ a value that is either $live$ or $terminated$ representing the state of the transaction.
+\end{itemize}
+
+There are three main phases in the lifecycle of a transacton.
+The first begin phase where the transaction is initialized, second the operational phase and finally termination.
+During these phases a transaction goes through two phases, \emph{live} and \emph{terminated}.
+
+During the begin phase a transaction is assigned a $\tau_i$ and a \emph{Dependency Snapshot Timestamp} ($dt$), while the Effect Map, Read Set and the commit timestamp are initialize at bottom ($\bot$).
+At the end of the begin phase a transaction is \emph{live}.
+
+During the operational phrase any number of arbitrary operations are executed.
+Every Read triggers an update of $R$ and every write triggers an update of $\varepsilon$.
+
+Once all the operations are executed the transaction enters the termination phase where it either commit or aborts. At the end of the termination phase the transaction is terminated and can no longer be modified.
+
+\subsection{Snapshot}
+
+Snapshots are a collection of transactions that are represented by a timestamp $St$.
+Each snapshot is composed of the transactions that have a commit timestamp $ct \leq St$. 
+Snapshots can be represented as a collection of commited transactions that are visible to a live transaction.
+
+Snapshots provide isolation guarantees, meaning a Client only read object versions that are part of the snapshot and are committed. 
+In addition to isolation Snapshots also provide the client with Atomicit guarantees.
+Once the effects $\varepsilon_i$ is seen by a transaction than all the effects of $\tau_i$ are seen.
+
+\subsection{Object-version}
+
+The system maintains the following information aboutan object's version called Object-version: 
+\begin{itemize}
+  \item \emph{key} is the unique identifier of the object
+  \item \emph{$\tau_i$} identifier of the transaction this version is materilized from
+  \item \emph{blob} is a pointer to the value of the object materialized with the updates contained in the dependency snapshot of the transaction and its effect map
+\end{itemize}
+
+
+
+\section{Model}
+
+In order to model a the database we first define the main actors and interaction at play in a simple database.
+% A database is a collection of data and accessed by a client.
+
+We define two main actors in our system:
+\begin{itemize}
+  \item Client: Actor that interacts with a database using Application Programming Interfaces (APIs) exposed by the database
+  \item Database: Actor that host data that is read and written by the client.
+\end{itemize}
+
+
+In this paper we will consider that connection to the database, and key discovery is out of scope.
+Therefore a Client will only interact with the database through transactions.
+To start and execute a transaction the Database exposes the following API:
+\begin{itemize}
+\item \emph{begin()} initialize a transaction with a snapshot (\emph{dt})
+\item \emph{read(k): v} returns the object \emph{k} from the snapshot \emph{dt}
+\item \emph{effect(k,v)} assigns a the value v to the key K
+\item \emph{abort()} abort the live transaction
+\item \emph{commit()} assign a commit timestamp to the transaction and end the transaction.
+\end{itemize}
+
+Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (See figure 1).
+We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
+
+\subsection{Transactional Causal Consistency (TCC)}
+
+Our model can be provide multiple conssitency level.
+In this work we focus our effort on TCC for every model.
+To keep track of happened-before, we use timestamp to order updates.
+
+Our model only have one data center therefore logically sequential.
+When a transaction commits it is assigned a timestamp that is assigned to the $Ct$.
+This timestamp represent the point of visibility for all the effect in the transaction.
+If a future transaction has a dependency $Dt_j$ higher than the commit timestamp $Ct_i$ of a transaction than all the effects of $\tau_i$ are visible for $\tau_j$.
+
+When a transaction commit the system asssigns a timestamp to the transaction that represents the time of commit.
+This timestamp is always high than the dependency $Dt$.
+
+
+\subsection{Transaction invariants}
+
+
+For every transaction we define the follwing invariants.
+The dependency timestamp of a transaction is always lower than the commit timestamp of transaction.
+\[
+  \begin{array}{lcl}
+    \emph{$Dt_i < Ct_i$}
+  \end{array} 
+\]
+
+\subsection{Unbounded Memory}
+
+The Unbounded Memory model store object versions in memory with transaction information.
+Because this model is memory only, all data is lost is a crash or a restart happens.
+Therefore there are no invariants regarding persistency, recovery.
+Additionally we consider the memory to be unbounded so there are no restriction on the size of the data. 
+
+
+\subsubsection{System invariants}
+
+For every API call the database check if the system invariants are maintained.
+
+For each client interacting with the database only one live transaction is allowed.
+Thus if a client attempts de start a transaction while having a live transaction the transaction start either fails of the previous one is aborted.
+
+
+
+\subsection{Transaction invariants}
+
+
+For every transaction we define the follwing invariants.
+In order to ensure that every operation is done within a transaction our model require that each operation checks if there is a $live$ transaction for every API except the \emph{begin()} function.
+
+When a transaction commit it is causally dependent on the Snapshot reprensented by $Dt$.
+We represent this by assigning a commit timestamp $Ct_i$ higher than the dependency timestamp.
+
+These are the transaction invariants maintained during transaction:
+\[
+  \begin{array}{lcl}
+    \emph{$Dt_i < Ct_i$}\\
+    \emph{$(read, effect, commit, abort) => State = live$}
+  \end{array} 
+\]
+
+
+\subsubsection{Start transaction}
+When a client start a transaction using the \emph{begin(dt)} the system creates a transaction object.
+
+The transaction object is assigned a unique transaction identifier $\tau_i$ and the system check if the snapshot is valid in regards to the consistency model.
+
+\subsubsection{Read}
+
+Returns the Object-version k from the snapshot \emph{dt}. 
+If the object doesn't exist the system return a default value.
+
+In case a transaction attempts to read an object that has concurrent updates, we use CRDTs in order to ensure that the merge is correct.
+The system adds the key to the read set of the live transaction.
+
+\subsubsection{Effect}
+
+Applies the effect on the object present in the snapshot \emph{dt} resulting in the creation of a new object-version.
+The object version is then added to the Effect Map of the live transaction.
+
+\subsubsection{Commit transaction}
+
+When a transaction is committed the system checks if the transaction is valid in regard to the consistency model chosen by the system.
+If everything is correct then the transaction is committed and the transaction is assigned a commit timestamp such as $Dt_i \leq Ct_i$.
+
+All the effects of the transaction are then available for transaction that have $Dt_j \geq Ct_i$.
+
+
+\subsubsection{Abort transaction}
+
+If a transaction is aborted then all the effects of the transaction are void.
+
+\subsection{Bounded Memory}
+
+In the bounded Memory model we choose de define an arbitrary limitation on the size of the memory used by the system.
+
+\subsubsection{System invariants}
+All system invariants from the Unbounded memory are present here.
+Plus we introduce a two new value:
+\begin{itemize}
+  \item \emph{$M_{used}$} contains the current size of data in memory
+  \item \emph{$M_{limit}$} represents the maximum size available to the database
+\end{itemize}
+Based on these two variable we introduce a new system invariant:
+\begin{itemize}
+  \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
+\end{itemize}
+
+
+
+\subsection{Implementation}
+
+Implementation and evaluation of the different models have two purposes.
+First we implement our different models according to the model of the database.
+
+We implemented our models in java with external libraries for persistency and also used a CRDT library that we consider being correct.
+
+For every implementation we run a set of tests that belong to two different categories.
+First we ran standard test ensuring that our database behave correctly.
+Once all the tests pass we run the same sets of writes and read to the databases in order to compare models between them.
+
+Finally we plan on designing test that specifically targets breaking invariants defined in our model making sure the system crashes if they are violated.
+
+
+
+\section{Approach}
+
+We start from the intuitive simple version of a database.
+A collection of object in memory, we formalize the different actors that are in play in this system and their APIs.
+Once the simple version is done we add a desirable features, one at a time while maintaining previously defined invariants.
+And specifying new mechanisms that are added to the system.
+
+
+
+In our model the only thing affected by formalism is the lookup.
+
+\section{Conclusion}
+
+
+\bibliography{exemple}
+
+\end{document}

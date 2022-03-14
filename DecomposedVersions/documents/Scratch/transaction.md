@@ -202,7 +202,7 @@ In this system model, when trying to read $x$ the Snapshot always return the Ver
 
 In the specification above I didn't use the boolean of a transaction to check if it's committed shoudl changed.
 
-<!-- <!-- 
+<!-- 
 
 , and there is no committed transaction with a higher timestamp than the dependency snapshot.
 
@@ -211,7 +211,7 @@ For a transaction T, its dependency snapshot must be committed, and there is no 
 When transaction T, commits, there must be no transaction committed between dependency and the commit timestamp that has a 
 
 
-A dependency snapshot must be committed,  —->  -->
+A dependency snapshot must be committed,  —-> 
 
 # Sessions
 
