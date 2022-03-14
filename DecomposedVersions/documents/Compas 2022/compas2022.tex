@@ -50,7 +50,7 @@ Fast writes are achieved using a journal; where newly written data is appended i
 And fast read are achieved using a cache, where recently used version are stored in fast random access memory.
 
 It is hard to achieve both, keeping everything in memory, or at least using memory as a first layer might cause data loss if there is a crash.
-Similarly a journal is ideal if we think about data persistence, but reading through a sequential log can lead to high read latency.
+Similarly a journal is ideal if we think about data persistency, but reading through a sequential log can lead to high read latency.
 
 Most databases, are build with these ideas in mind and have three major components that interact with each other:
 \begin{itemize}
@@ -59,9 +59,7 @@ Most databases, are build with these ideas in mind and have three major componen
   \item Journal
 \end{itemize}
 
-If the database is geo distributed, there might be a replication layer.
-
-To simplify our reasonning this work will not talk about the caching layer.
+On top of this if the database is geo distributed, there might be a replication layer that adds a new layer of complexity on top the existing mecanisms.
 
 This paper present our work of formilising the behavior and  interaction between different component of a typical database.
 We start from an intuitive version of a database, an in memory key-value store that store object versions.
@@ -175,20 +173,13 @@ Our model can be provide multiple conssitency level.
 In this work we focus our effort on TCC for every model.
 To keep track of happened-before, we use timestamp to order updates.
 
-Our model only have one data center therefore logically sequential.
-When a transaction commits it is assigned a timestamp that is assigned to the $Ct$.
+Our model only have one data center therefore it is logically sequential.
+When a transaction $\tau_i$ commits it is assigned a timestamp that is assigned to the $Ct_i$.
 This timestamp represent the point of visibility for all the effect in the transaction.
-If a future transaction has a dependency $Dt_j$ higher than the commit timestamp $Ct_i$ of a transaction than all the effects of $\tau_i$ are visible for $\tau_j$.
+If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
 
-When a transaction commit the system asssigns a timestamp to the transaction that represents the time of commit.
-This timestamp is always high than the dependency $Dt$.
+Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.
 
-
-\subsection{Transaction invariants}
-
-
-For every transaction we define the follwing invariants.
-The dependency timestamp of a transaction is always lower than the commit timestamp of transaction.
 \[
   \begin{array}{lcl}
     \emph{$Dt_i < Ct_i$}
@@ -205,12 +196,10 @@ Additionally we consider the memory to be unbounded so there are no restriction 
 
 \subsubsection{System invariants}
 
-For every API call the database check if the system invariants are maintained.
+For every API call, the database check if the system invariants are maintained.
+In the unbounded memory version we have no constraints on the size of the memory used and no persistent layer.
 
-For each client interacting with the database only one live transaction is allowed.
-Thus if a client attempts de start a transaction while having a live transaction the transaction start either fails of the previous one is aborted.
-
-
+Therefore we do not have any overall system invariant.
 
 \subsection{Transaction invariants}
 
@@ -230,25 +219,25 @@ These are the transaction invariants maintained during transaction:
 \]
 
 
-\subsubsection{Start transaction}
-When a client start a transaction using the \emph{begin(dt)} the system creates a transaction object.
+\textbf{Start transaction}
+When a client start a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
+If no dependency timestamp is specified than the transaction is initialized with a valid dependency timestamp.
+The transaction is then assigned a unique transaction identifier $\tau_i$.
 
-The transaction object is assigned a unique transaction identifier $\tau_i$ and the system check if the snapshot is valid in regards to the consistency model.
 
-\subsubsection{Read}
-
+\textbf{Read}
 Returns the Object-version k from the snapshot \emph{dt}. 
 If the object doesn't exist the system return a default value.
 
 In case a transaction attempts to read an object that has concurrent updates, we use CRDTs in order to ensure that the merge is correct.
 The system adds the key to the read set of the live transaction.
 
-\subsubsection{Effect}
+\textbf{Effect}
 
 Applies the effect on the object present in the snapshot \emph{dt} resulting in the creation of a new object-version.
 The object version is then added to the Effect Map of the live transaction.
 
-\subsubsection{Commit transaction}
+\textbf{Commit transaction}
 
 When a transaction is committed the system checks if the transaction is valid in regard to the consistency model chosen by the system.
 If everything is correct then the transaction is committed and the transaction is assigned a commit timestamp such as $Dt_i \leq Ct_i$.
@@ -256,7 +245,7 @@ If everything is correct then the transaction is committed and the transaction i
 All the effects of the transaction are then available for transaction that have $Dt_j \geq Ct_i$.
 
 
-\subsubsection{Abort transaction}
+\textbf{Abort transaction}
 
 If a transaction is aborted then all the effects of the transaction are void.
 
@@ -264,7 +253,7 @@ If a transaction is aborted then all the effects of the transaction are void.
 
 In the bounded Memory model we choose de define an arbitrary limitation on the size of the memory used by the system.
 
-\subsubsection{System invariants}
+\textbf{System invariants}
 All system invariants from the Unbounded memory are present here.
 Plus we introduce a two new value:
 \begin{itemize}
@@ -276,6 +265,15 @@ Based on these two variable we introduce a new system invariant:
   \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
 \end{itemize}
 
+\subsection{Garbage collection}
+When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
+All the transaction in the system are halted in order to perform a garbage collection.
+
+In order to the memory constraints of the system we keep track of all the dependencies of running transactions but also all the commit timestamp of finished transactions.
+
+We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
+\emph{MinDt} represents the oldest snapshot any running transaction is reading from.
+When a transaction $\tau_i$ commits or aborts if $Dt_i = MinDt$ and not other transaction is reading from $Dt_i$ the system advances the timestamp to the next oldest snapshot in the system.
 
 
 \subsection{Implementation}
