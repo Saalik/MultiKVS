@@ -55,6 +55,35 @@ public class TestClient {
         client.commitTransaction();
         System.out.println("Test 3 passed");
 
+        System.out.println("Test 4: Writing a 100 times in a single transaction");
+
+        client.startTransaction();
+        for (int i= 0; i < 100 ; i++) {
+            client.effect("key4", 1);
+        }
+        TransactionID dependency4 = client.commitTransaction();
+
+        client.startTransaction(dependency4);
+        assertEqual(client.get("key4"), 100);
+        client.abort();
+
+        System.out.println("Test 4 passed");
+
+        System.out.println("Test 5: Writing a 100 times in different transactions");
+
+        TransactionID dependency5 = null;
+        for (int i= 0; i < 100 ; i++) {
+            client.startTransaction();
+            client.effect("key5", 1);
+            dependency5 = client.commitTransaction();
+        }
+
+        client.startTransaction(dependency5);
+        assertEqual(client.get("key5"), 100);
+        client.abort();
+
+        System.out.println("Test 5 passed");
+
         client.interrupt();
         try {
             client.join();

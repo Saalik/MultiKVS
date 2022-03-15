@@ -62,6 +62,7 @@ public class Client extends Thread implements KVSClient {
         assert (tr != null);
         if (tr.getOperations().isEmpty()){
             System.out.println("Nothing to commit");
+            tr=null;
             return null;
         } else {
             kvs.commitTransaction(tr);
