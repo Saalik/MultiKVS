@@ -39,56 +39,8 @@ saalik.hatia@lip6.fr}
     isolés sous forme de mots-clés.}
 \end{abstract}
 
-
 %=========================================================
 \section{Introduction}
-%=========================================================
-
-
-Modern planet-scale applications increasingly use database to provide users with fast, available and consistent data.
-Developpers use these databases with complex backends to build fast and reliable applications.
-Ideally we want databases to have fast writes and fast reads.
-Fast writes are achieved using a journal; where newly written data is appended in a write only sequential log.
-And fast read are achieved using a cache, where recently used version are stored in fast random access memory.
-
-It is hard to achieve both, keeping everything in memory, or at least using memory as a first layer might cause data loss if there is a crash.
-Similarly a journal is ideal if we think about data persistency, but reading through a sequential log can lead to high read latency.
-
-Most databases, are build with these ideas in mind and have three major components that interact with each other:
-\begin{itemize}
-  \item Cache
-  \item Version store
-  \item Journal
-\end{itemize}
-
-On top of this if the database is geo distributed, there might be a replication layer that adds a new level of complexity on top the existing mecanisms.
-
-% This paper present our work of formilising the behavior and  interaction between different component of a typical database.
-% We start from an intuitive version of a database, an in memory key-value store that store object versions.
-% We formalize the application programming interface (API) of that components and the effects each API has on the overall system.
-% From these we add new components aiming to achieve feature parity to a real world database.
-
-We adopt a stepwise approach.
-The initial step studies a simplistic concurrent database system; we describe its key invariants, formalize an operational semantics, and provide a reference implementation.
-Each following step adds a single feature.
-We formalize the feature and show experimentally that the improved system simulates the simpler one.
-This allows our final design to provide users with consistency guarantees while having an efficient backend in case of a recovery.
-We claim to provide developers with a clear model that allows them to implement a correct and available database with features suited to their requirements.
-
-
-
-% They expect their data to be consistency while remaining available.
-% If a network partition or a crash were to occur they except being able to continue their work while disconnect and data to be safely merged and recovered.
-% <!-- The majority of database use transactions to provide developpers with a simple and reliable way to interact with their data. -->
-% Journaling, materializing, checkpointing, truncation and recovery are well-known mechanisms that can be used to maintain speed and consistency.
-% Their interplay is known to be tricky and their implementation if often obscur.
-% This leads to situation where a developper doesn't know what to expect just based on the different mechanisms used to implement t
-% We wrote a formal model, came up with some simple design and we show through comparaison that this is true.
-
-% Developpers use complicated backend to build their applications.
-
-%=========================================================
-\section{New Intro}
 %=========================================================
 
 Modern planet-scale applications increasingly use distributed database system to provide users with fast, available and consistent data.
