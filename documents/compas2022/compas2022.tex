@@ -3,7 +3,7 @@
 %===========================================================
 % Une des quatre options 'parallelisme', 'architecture', 'systeme' 
 % 'tempsreel' doit être utilisée avec le style compas2021
-\documentclass[parallelisme]{compas2022}
+\documentclass[systeme]{compas2022}
 \usepackage{algorithm2e}
 
 %===========================================================
@@ -14,7 +14,7 @@
 
 \begin{document}
 
-\title{TCC}
+\title{Correct and high performance database}
 \shorttitle{TCC}
 
 \author{Saalik Hatia}%
@@ -43,6 +43,7 @@ saalik.hatia@lip6.fr}
 %=========================================================
 \section{Introduction}
 %=========================================================
+
 
 Modern planet-scale applications increasingly use database to provide users with fast, available and consistent data.
 Developpers use these databases with complex backends to build fast and reliable applications.
@@ -84,7 +85,26 @@ We claim to provide developers with a clear model that allows them to implement 
 % This leads to situation where a developper doesn't know what to expect just based on the different mechanisms used to implement t
 % We wrote a formal model, came up with some simple design and we show through comparaison that this is true.
 
-% Developpers use complicated backend to build their applications. 
+% Developpers use complicated backend to build their applications.
+
+%=========================================================
+\section{New Intro}
+%=========================================================
+
+Modern planet-scale applications increasingly use distributed database system to provide users with fast, available and consistent data.
+But existing database are built without any formalising in mind.
+The have bugs that impact the consistency and integrity of their data.
+We want to build a database that has high-perfomance and is correct by design.
+Formalising a database the provide users with fast read-reads, data safety and geo replication is hard.
+Instead of trying to formalize a database with these features we use the following approach.
+We decompose the database we are aiming for into simpler, smaller models.
+We adopt a stepwise approach starting with a bare-bones and obviouly correct concurrent database system, then at each step we add features, like persistency, caching, checkpointing and geo-distribution. 
+Each step adds a single feature.
+For every step we describe its key invariants, formalize an operationnal semantics, and provide a reference implementation.
+Then we compare the different models between them and show through testing that the implementations are equivalent.
+Ultimately our final design is both correct and is equivalent to other equivalent database in terms of perfomance.
+We claim to provide developers with a clear model that allows them to implement a correct, high performance and geo-distributed database.
+
 
 %=========================================================
 \section{Transaction and snapshots}
