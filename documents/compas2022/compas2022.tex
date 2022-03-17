@@ -19,17 +19,20 @@
 \toappear{1} % Conserver cette ligne pour la version finale
 
 \begin{document}
+\selectlanguage{english}
 
-\title{Correct and high performance database}
-\shorttitle{TCC}
+\title{Towards correct high-performance database systems}
+\shorttitle{Correct High-Performance DBMSs}
 
-\author{Saalik Hatia}%
+\author{Saalik Hatia(1), Annette Bieniusa(2), Carla Ferreira(3), Gustavo Petri(4), Marc Shapiro(1)}
 
-\address{Université Pierre et Marie Curie\\
-Laboratoire LIP6 \\
-4, place jussieu\\
-75005 Paris - France\\
-saalik.hatia@lip6.fr}
+
+\address{
+  (1)~LIP6--Sorbonne-Université, Paris, France  \\
+  (2)~TU Kaiserslautern, Germany \\
+  (3)~Universidade NOVA de Lisboa, Portugal \\
+  (4)~ARM, Cambridge, United Kingdom\\
+  }
 
 \date{\today}
 
@@ -189,20 +192,20 @@ Every update to an object creates its own version and to ensure that all transac
 
 In this paper we note object-version by $(key ,\tau_i)$.
 
-\section{Approach}
+% \section{Approach}
 
-Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
+% Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
 
-We have two choices to start from:
-\begin{itemize}
-  \item An in-memory key-value store that stores operations in a sequential Journal.
-  \item An in memory key-value store that create and store states.
-\end{itemize}
+% We have two choices to start from:
+% \begin{itemize}
+%   \item An in-memory key-value store that stores operations in a sequential Journal.
+%   \item An in memory key-value store that create and store states.
+% \end{itemize}
 
-To start we do not impose any constraints on the size of the memory footprint.
-This allow use to focus only on transaction handling and the invariants that are associated with them.
-From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
-The different transitions are represented in figure 1 \ref{fig:transitions}.
+% To start we do not impose any constraints on the size of the memory footprint.
+% This allow use to focus only on transaction handling and the invariants that are associated with them.
+% From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
+% The different transitions are represented in figure 1 \ref{fig:transitions}.
 
 \section{System Model}
 
@@ -296,7 +299,6 @@ $Ct = null$
 Postconditions:\\
 $R_i = R \cup \{key\}$ \\
 
-
 \textbf{Effect} the system creates a new Object-version by merging the Object-version that is returned by \emph{read(key)} with the effect.
 
 Preconditions:\\ 
@@ -309,8 +311,6 @@ $Ct = null$
 
 Postconditions:\\
 $\varepsilon_i = \varepsilon_i \cup \{(key, \tau_i)\}$ \\
-
-
 
 \textbf{Commit} the system checks if the effects $\varepsilon_i$ are valid in regards to the consistency model and abort if not. (Need more precision. Maybe earlier here does not seem to be the correct section)
 If the effects are valid the Objects versions are added to the Store and assigns a commit timestamp $Ct_i$.
@@ -325,7 +325,6 @@ $Store = Store \cup \varepsilon_i$\\
 $State = terminated$\\
 $Dt_i \geq Ct_i$.\\
 
-
 \textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
 
 Preconditions:\\ 
@@ -335,7 +334,6 @@ $Ct = null$
 Postconditions:\\
 $State = terminated$\\
 $Ct = null$
-
 
 \subsection{Bounded Memory}
 
@@ -359,8 +357,6 @@ We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
 \emph{MinDt} represents the oldest snapshot any running transaction is reading from.
 When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningTr}. 
 And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
-
-
 
 \subsection{Garbage collectio - WIP}
 When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
