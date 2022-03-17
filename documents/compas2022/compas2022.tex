@@ -1,10 +1,19 @@
-%===========================================================
+% -*- mode: latex; coding: utf-8-unix -*-
+
+% ===========================================================
 %                              Choix de thématique
 %===========================================================
 % Une des quatre options 'parallelisme', 'architecture', 'systeme' 
 % 'tempsreel' doit être utilisée avec le style compas2021
 \documentclass[systeme,french,english]{compas2022}
+\usepackage[utf8]{inputenc}
+
 \usepackage{algorithm2e}
+\usepackage[T1]{fontenc} %% Vector fonts
+\usepackage[numbers,square,sort&compress]{natbib} %% Better bibliography
+\usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
+\usepackage{xspace}  %% Macros with automatic spacing
+\usepackage[defblank]{paralist}  %% inline lists
 
 %===========================================================
 %                               Title
@@ -111,56 +120,55 @@ comparable performance to ad-hoc database systems with similar features.
 We claim that providing developers with a clear model helps to implement
 a correct, high performance and geo-distributed database.
 
-%=========================================================
-\section{Interface and transactions}
-%=========================================================
+\section{Transactions and timestamps}
+\label{sec:transactions}
 
-We define two main actors in our system:
-\begin{itemize}
-  \item A client: interacts with the database using Application Programming Interfaces (APIs) exposed by the database
-  \item Database: hosts data that is read and written by the client.\\
-\end{itemize}
+A client of the DDBMS executes transactions.
+Classically, a transaction is a sequence of reads and updates, bounded by
+a begin and an end.
+The transaction either aborts with no effects; or it commits and all its
+commits become visible atomically to later transactions.
+Formally, the choice between abort and commit is non-deterministic (in
+practice it depends on the application's invariants and on external
+events, such as sufficient resources being available).
 
-In this paper a client only interacts with the database through transactions, which are a sequence of read and write operations.
-The API is the following:
-\begin{itemize}
-  \item \emph{begin(Dt)} initializes a transaction with a snapshot
-  \item \emph{read(key): blob} returns the object \emph{key} from the snapshot
-  \item \emph{effect(key,blob)} assigns a the value \emph{blob} to the key \emph{key}
-  \item \emph{abort()} abort the live transaction
-  \item \emph{commit()} attempts to commit, if it succeds assigns a commit timestamp to the transaction; otherwise the transaction aborts.
-\end{itemize}
+We formalise the mutual ordering of transactions with abstract
+\emph{timestamps}.
+Committing a transaction $i$ assigns it a commit timestamp
+$\mathit{Ct}_{i}$; all its updates are labelled with this commit
+timestamp.
+Conversely, a transaction $j$  has a \emph{snapshot timestamp} (or dependency
+timestamp) $\mathit{Dt}_{j}$.
+Transaction $i$ precedes transaction $j$ if $\mathit{Ct}_{i} \le
+\mathit{Dt}_{j}$.
+Transaction $j$ \emph{depends on} all transactions $i$ such $i$ precedes
+$j$; any read that $j$ performs includes all the updates with a label
+less or equal to $\mathit{Dt}_{j}$.
+The set of such preceding updates is called the \emph{snapshot} of
+transaction $j$.
+ 
+Our formalisation is agnostic to the transaction model (e.g.,
+serialisable or snapshot-isolation).
+For space reasons, this paper considers a single model, Transactional
+Causal Plus Consistency (TCC+), i.e., causal consistency with
+transactions and convergence \cite{rep:syn:sh228,rep:pro:sh182}.
+Under TCC+, a snapshot must be a causally-consistent cut.
+Other transaction models differ by timestamp ordering being partial or
+total, and by constraints on beginning and committing a transaction.
 
+The formal model represents a transaction with the following information:
+\begin{compactitem}
+\item $\tau$: unique transaction identifier.
+\item $\mathit{Dt}$: dependency timestamp.
+\item {$\varepsilon$}: effect map, records the updates made by the transaction.
+\item ${R}$: read set, records the objects read by the transaction.
+\item $\mathit{Ct}$: commit timestamp, assigned if and when the
+  transaction commits.
+\item $\mathit{State}$: status, either \emph{not\_started}, \emph{live} or \emph{terminated}.\\
+\end{compactitem}
 
-%=========================================================
-\subsection{Transactions}
-%=========================================================
+A Read updates the read set $R$; a write updates the effect map $\varepsilon$.
 
-A transaction is a sequence of read and write operations followed by a commit or an abort.
-An operation is either a read or a write from the transaction's snapshot called \emph{Dependency Snapshot}.
-And the visibility of these operations are atomic at the time of commit.
-
-There are three main phases in the lifecycle of a transaction.
-A transaction starts with a begin phase where the transaction is initialized, in the operational phase the client executes operations and finally termination that ends the transaction.
-During these phases a transaction goes through two state, \emph{live} and \emph{terminated}.
-
-A transaction is represented using the following information:
-\begin{itemize}
-\item \emph{$\tau_i$} Unique transaction identifier.
-\item \emph{Dt} Dependency timestamp which represent a snapshot the transaction will interact with.
-\item \emph{$\varepsilon$} Effect map contains the writes made by the transactions.
-\item \emph{R} Read set which records the keys of objects read by the transaction.
-\item \emph{Ct} a commit timestamp that represent the time at which the timestamp has been committed.
-\item \emph{State} the state of the transaction is either \emph{live} or \emph{terminated}.\\
-\end{itemize}
-
-During the begin phase a transaction is assigned a unique identifier $\tau_i$ and a \emph{Dependency Snapshot Timestamp} ($Dt$), while the Effect Map, Read Set and the commit timestamp are initialized to \emph{null}. Finally the state of the transaction is set to \emph{live}.
-
-During the operation phase any number of operations are executed.
-A Read updates the Read Set $R_i$ and a write updates the Effect Map $\varepsilon_i$.
-
-In termination phase the transaction either commits or aborts depending on client and system invariants. 
-The transaction's state is then set to \emph{terminated}
 
 \subsection{Timestamps and snapshots}
 
@@ -360,6 +368,7 @@ Finally we plan on designing test that specifically targets breaking invariants 
 \section{Conclusion}
 
 
-\bibliography{exemple}
+\bibliography{predef,shapiro-bib-ext,shapiro-bib-perso}
+
 
 \end{document}
