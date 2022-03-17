@@ -136,6 +136,21 @@ Every update to an object creates its own version and to ensure that all transac
 
 In this paper we note object-version by $(key ,\tau_i)$.
 
+\section{Approach}
+
+Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Ctore that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
+
+We have two choices to start from:
+\begin{itemize}
+  \item An in-memory key-value store that stores operations in a sequential Journal.
+  \item An in memory key-value store that create and store states.
+\end{itemize}
+
+To start we do not impose any constraints on the size of the memory footprint.
+This allow use to focus only on transaction handling and the invariants that are associated with them.
+From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
+The different transitions are represented in figure 1 \ref{fig:transitions}.
+
 \section{System Model}
 
 Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
@@ -144,7 +159,7 @@ We provide an implementation for every model and compare implementations between
 \begin{figure}[tp]
   \centering
   \includegraphics[width=0.75\textwidth]{figures/transitions.png}
-  \caption{Progressions in our model}
+  \caption{Needs to be changed}
   \label{fig:transitions}
 \end{figure}
 
@@ -173,14 +188,13 @@ We introduce our first system invariant:
 We start with a simple in-memory key-value store.
 All the database is stored in volatile memory therefore if a crash or restart occurs the database is lost.
 
-The Unbounded Memory model stores Object-version $key_{\tau_id}$ in memory.
-In adition to the object version the transaction information are also stored in memory in order to track information necessary to uphold our consistency guarantees.
+The Unbounded Memory in  the transaction information are also stored in memory in order to track information necessary to uphold our consistency guarantees.
 
 Because this model is memory only, all data is lost is a crash or a restart happens.
 Therefore there are no invariants regarding persistency or recovery.
 Additionally we consider the memory to be unbounded so there are no restriction on the size of the data or constraints on the dependency timestamps.
 
-\subsection{Transaction invariants}
+\subsubsection{Invariants}
 
 For every transaction we define the following invariants.
 In order to ensure that every operation is done within a transaction our model require that each API call except \emph{begin()} checks if there is a $live$ transaction for the calling client.
@@ -254,6 +268,7 @@ $State_i \leftarrow \emph{terminated}$ \\
 
 \subsection{Bounded Memory}
 
+Unbounded memory is not realistic in a real system.
 In the Bounded Memory model we choose to define an arbitrary limitation on the size of the memory used by the system.
 
 \textbf{System invariants}
