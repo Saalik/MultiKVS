@@ -3,9 +3,15 @@
 %===========================================================
 % Une des quatre options 'parallelisme', 'architecture', 'systeme' 
 % 'tempsreel' doit être utilisée avec le style compas2021
-\documentclass[systeme]{compas2022}
-\usepackage{algorithm2e}
+\documentclass[systeme,french,english]{compas2022}
+\usepackage[utf8]{inputenc}
 
+\usepackage{algorithm2e}
+\usepackage[T1]{fontenc} %% Vector fonts
+\usepackage[numbers,square,sort&compress]{natbib} %% Better bibliography
+\usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
+\usepackage{xspace}  %% Macros with automatic spacing
+\usepackage[defblank]{paralist}  %% inline lists
 %===========================================================
 %                               Title
 %===========================================================
@@ -33,10 +39,30 @@ saalik.hatia@lip6.fr}
 %R\'esum\'e
 %===========================================================  
 \begin{abstract}
-  Le fichier fonctionne en \LaTeXe. La taille
-  de ce résumé peut atteindre une dizaine de lignes.
-  \MotsCles{un maximum de 5 mots significatifs, en français, doivent être 
-    isolés sous forme de mots-clés.}
+  Our goal is to design and implement a full-featured, high-performance
+  geo-distributed database that is correct by construction.
+  We adopt a stepwise approach.
+  We start from a simplistic concurrent database system; we formalise an
+  operational semantics and its key invariants; we also provide a
+  reference implementation and test cases exercising the invariants.
+  From there, we plan to prove that the semantic model satisfies the
+  invariants (proof in Coq), and to check that the implementation respects
+  the model thanks to litmus-test cases.
+  Each following step adds a single feature.
+  We formalise the feature, and expect to show formally and experimentally
+  that the improved system simulates the simpler one.
+  We expect that the features compose, so that the correctness of the full
+  system with all the features follows from the individual proofs.
+  At the time of writing, the operational semantics for several steps is
+  complete; the translation to Coq and the reference implementation are
+  ongoing.
+
+  \MotsCles{
+    système réparti,
+    base de données géo-distribuée,
+    vérification formelle,
+    test
+    }
 \end{abstract}
 
 \tableofcontents
@@ -45,71 +71,98 @@ saalik.hatia@lip6.fr}
 \section{Introduction}
 %=========================================================
 
-Modern planet-scale applications increasingly use distributed database system to provide users with fast, available and consistent data.
-But existing database are built without any formalising in mind.
-They have bugs that impact the consistency and integrity of their data.
-We aim to build a database that is correct by design and performant.
-Formalising a database that provide users with fast read and writes, data safety and geo replication is hard.
-Instead of trying to formalize a database with all these features we propose the following approach.
-We decompose the database we are aiming for into simpler, smaller models.
-We adopt a stepwise approach starting with a bare-bones and obviously correct concurrent database system, then at each step we add features, like persistency, caching, checkpointing and geo-distribution. 
-Each step adds a single feature.
-For every step we describe its key invariants, formalize an operationnal semantics, and provide a reference implementation.
-Then we compare the different models between them and show through testing that the implementations are equivalent.
-Ultimately, we show that our final design is both correct and is equivalent to other equivalent databases in terms of perfomance.
-We claim to provide developers with a clear model that allows them to implement a correct, high performance and geo-distributed database.
+Modern online applications use a distributed database management
+system (DDBMS), to provide users with available and consistent data.
+The purpose of a DDBMS is conceptually simple: to store and retrieve
+shared data.
+However, for performance and fault-tolerance reasons, the internals of a
+typical database are very complex, with many moving parts that interact
+in hard-to-understand ways.
+Existing databases are designed in a manual and ad-hoc manner;
+inevitably, they have bugs that impact the consistency and integrity of
+data.
 
+The goal of this work is to build a database that is correct by design,
+while including some important optimisations (e.g., caching)
+and properties (e.g., fault tolerance).
+Formalising a database that provide users with fast read and writes,
+data safety and geo-replication is hard.
+Any attempt to verify at once some monolithic specification, including
+all the interesting properties, is probably doomed to failure.
+Instead, we propose the following incremental approach,  decompose the
+system into a set of small, orthogonal modules and features.
 
-%=========================================================
-\section{Interface and transactions}
-%=========================================================
+Our starting baseline is a bare-bones and ``obviously correct'' DDBMS,
+restricted to its simplest function, i.e., transactions reading and
+writing data.
+We formalise its operational semantics and specify its invariants.
+We prove (in Coq) that the semantics satisfies the invariants.
+We also provide a (hand-written) reference implementation, and use test
+cases derived from the formal model to check that it follows the
+semantics and does not violate the invariants.
 
-We define two main actors in our system:
-\begin{itemize}
-  \item A client: interacts with the database using Application Programming Interfaces (APIs) exposed by the database
-  \item Database: hosts data that is read and written by the client.\\
-\end{itemize}
+Each design step adds a single feature, e.g., a cache or logging,
+with its associated operational semantics and invariants.
+We use simulation (or bisimulation) to show that the formal model is
+equivalent without and with the feature, modulo the added constraints.
+We take a similar approach with the reference implementation.
+Furthermore, we compare performance without and with the feature.
 
-In this paper a client only interacts with the database through transactions, which are a sequence of read and write operations.
-The API is the following:
-\begin{itemize}
-  \item \emph{begin(Dt)} initializes a transaction with a snapshot
-  \item \emph{read(key): blob} returns the object \emph{key} from the snapshot
-  \item \emph{effect(key,blob)} assigns a the value \emph{blob} to the key \emph{key}
-  \item \emph{abort()} abort the live transaction
-  \item \emph{commit()} attempts to commit, if it succeds assigns a commit timestamp to the transaction; otherwise the transaction aborts.
-\end{itemize}
+Our ultimate aim is to show that the final design, including all the
+features, is both correct (by simulation of the baseline) and has
+comparable performance to ad-hoc database systems with similar features.
+We claim that providing developers with a clear model helps to implement
+a correct, high performance and geo-distributed database.
 
+\section{Transactions and timestamps}
+\label{sec:transactions}
 
-%=========================================================
-\subsection{Transactions}
-%=========================================================
+A client of the DDBMS executes transactions.
+Classically, a transaction is a sequence of reads and updates, bounded by
+a begin and an end.
+The transaction either aborts with no effects; or it commits and all its
+commits become visible atomically to later transactions.
+Formally, the choice between abort and commit is non-deterministic (in
+practice it depends on the application's invariants and on external
+events, such as sufficient resources being available).
 
-A transaction is a sequence of read and write operations followed by a commit or an abort.
-An operation is either a read or a write from the transaction's snapshot called \emph{Dependency Snapshot}.
-And the visibility of these operations are atomic at the time of commit.
+We formalise the mutual ordering of transactions with abstract
+\emph{timestamps}.
+Committing a transaction $i$ assigns it a commit timestamp
+$\mathit{Ct}_{i}$; all its updates are labelled with this commit
+timestamp.
+Conversely, a transaction $j$  has a \emph{snapshot timestamp} (or dependency
+timestamp) $\mathit{Dt}_{j}$.
+Transaction $i$ precedes transaction $j$ if $\mathit{Ct}_{i} \le
+\mathit{Dt}_{j}$.
+Transaction $j$ \emph{depends on} all transactions $i$ such $i$ precedes
+$j$; any read that $j$ performs includes all the updates with a label
+less or equal to $\mathit{Dt}_{j}$.
+The set of such preceding updates is called the \emph{snapshot} of
+transaction $j$.
+ 
+Our formalisation is agnostic to the transaction model (e.g.,
+serialisable or snapshot-isolation).
+For space reasons, this paper considers a single model, Transactional
+Causal Plus Consistency (TCC+), i.e., causal consistency with
+transactions and convergence \cite{rep:syn:sh228,rep:pro:sh182}.
+Under TCC+, a snapshot must be a causally-consistent cut.
+Other transaction models differ by timestamp ordering being partial or
+total, and by constraints on beginning and committing a transaction.
 
-There are three main phases in the lifecycle of a transaction.
-A transaction starts with a begin phase where the transaction is initialized, in the operational phase the client executes operations and finally termination that ends the transaction.
-During these phases a transaction goes through two state, \emph{live} and \emph{terminated}.
+The formal model represents a transaction with the following information:
+\begin{compactitem}
+\item $\tau$: unique transaction identifier.
+\item $\mathit{Dt}$: dependency timestamp.
+\item {$\varepsilon$}: effect map, records the updates made by the transaction.
+\item ${R}$: read set, records the objects read by the transaction.
+\item $\mathit{Ct}$: commit timestamp, assigned if and when the
+  transaction commits.
+\item $\mathit{State}$: status, either \emph{not\_started}, \emph{live} or \emph{terminated}.\\
+\end{compactitem}
 
-A transaction is represented using the following information:
-\begin{itemize}
-\item \emph{$\tau_i$} Unique transaction identifier.
-\item \emph{Dt} Dependency timestamp which represent a snapshot the transaction will interact with.
-\item \emph{$\varepsilon$} Effect map contains the writes made by the transactions.
-\item \emph{R} Read set which records the keys of objects read by the transaction.
-\item \emph{Ct} a commit timestamp that represent the time at which the timestamp has been committed.
-\item \emph{State} the state of the transaction is either \emph{live} or \emph{terminated}.\\
-\end{itemize}
+A Read updates the read set $R$; a write updates the effect map $\varepsilon$.
 
-During the begin phase a transaction is assigned a unique identifier $\tau_i$ and a \emph{Dependency Snapshot Timestamp} ($Dt$), while the Effect Map, Read Set and the commit timestamp are initialized to \emph{null}. Finally the state of the transaction is set to \emph{live}.
-
-During the operation phase any number of operations are executed.
-A Read updates the Read Set $R_i$ and a write updates the Effect Map $\varepsilon_i$.
-
-In termination phase the transaction either commits or aborts depending on client and system invariants. 
-The transaction's state is then set to \emph{terminated}
 
 \subsection{Timestamps and snapshots}
 
@@ -138,7 +191,7 @@ In this paper we note object-version by $(key ,\tau_i)$.
 
 \section{Approach}
 
-Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Ctore that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
+Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
 
 We have two choices to start from:
 \begin{itemize}
@@ -183,88 +236,106 @@ We introduce our first system invariant:
   \end{array} 
 \]
 
-\subsection{Unbounded Memory}
+\section{Intuitive model}
 
-We start with a simple in-memory key-value store.
-All the database is stored in volatile memory therefore if a crash or restart occurs the database is lost.
-
-The Unbounded Memory in  the transaction information are also stored in memory in order to track information necessary to uphold our consistency guarantees.
-
-Because this model is memory only, all data is lost is a crash or a restart happens.
-Therefore there are no invariants regarding persistency or recovery.
-Additionally we consider the memory to be unbounded so there are no restriction on the size of the data or constraints on the dependency timestamps.
-
-\subsubsection{Invariants}
-
-For every transaction we define the following invariants.
-In order to ensure that every operation is done within a transaction our model require that each API call except \emph{begin()} checks if there is a $live$ transaction for the calling client.
-
-When a transaction commit it is causally dependent on the Snapshot reprensented by $Dt$.
-We represent this by assigning a commit timestamp $Ct_i$ higher than the dependency timestamp.
+We start with an intuitive simple in-memory key-value store.
+Therefore if a crash or restart occurs the database is lost.
+In this section we present the semantics from the viewpoint of the system.
+The general behavior describe in this section is as follows.
+A client starts a transaction and execute a sequence of operations and tries to commit or abort the transaction.
+This means all operations executed by the client must be part of a \emph{live} transaction.
+This also include the commit and abort call.
+Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
 
 These are the transaction invariants maintained during transactions:
 \[
   \begin{array}{lcl}
-    \emph{$Dt_i < Ct_i$}\\
+    \emph{$Ct \neq null => Dt_i > Ct_i$}\\
     \emph{$(read, effect, commit, abort) => State = live$}
   \end{array} 
 \]
 
 
-TODO Le premier invariant est un peu faible tout seul. Il faut ajouter le fait qu'il est valable pour toutes transactions committées. Les sections suivantes sont sous forme de texte mais elle seront mise sous forme de pseudo code avec les precondition et les invariants.\\
 
-
-\textbf{Start transaction}
+\textbf{Start transaction} (Session part missing)
 When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
-If no dependency timestamp is specified than the transaction is initialized with a valid dependency timestamp.
-The transaction is then assigned a unique transaction identifier $\tau_i$ and $\emph{State} \leftarrow \emph{live}$ \\
+If no dependency timestamp is specified than system assign a valid snapshot to the transaction.
+(On parle de l'implémentation de ce mécanisme plus tard)
+The transaction is then assigned a unique transaction identifier $\tau_i$ and $\emph{State} \leftarrow \emph{live}$.
+Here are the preconditions, invariants and postconditions:
+(Alt) From these requirement we extract the following preconditions:
+
+Preconditions:\\
+$State \neq live$
+$Ct = null$
+
+Invariants:\\
+\emph{$Ct \neq null => Dt_i > Ct_i$}\\
+$Ct = null$
 
 Postconditions:\\
-$State_i \leftarrow \emph{live}$ \\
+$State_i = \emph{live}$ \\
+$Ct = null$
 
 
-\textbf{Read}\\
+\textbf{Read} returns the correct Object-version in the store that is valid in regads to our consistency model.
+If two conccurent Object-versions exist, meaning they are part of two transaction that have a commit timestamp lower or equal than the dependency timestamp and are not related by precedence.
+(NOTE: première fois que j'en parle)
+We use a deterministic algorithm, ie. merge or LWW, to choose the Object-version returned.
+In case there are no existing Object-version in memory we return a default value.
+Finally the system adds the key to the read set $R_i$ of the transaction. 
+
 Preconditions:\\ 
 $State_i = \emph{live}$ \\
+$Ct = null$
 
-Returns the Object-version k from the snapshot \emph{Dt}. 
-If the object doesn't exist the system returns a default value.
-
-In case a transaction attempts to read an object that has concurrent updates, we use CRDTs in order to ensure that the merge is determistic.
-The system adds the key to the read set of the live transaction.\\
-$R_i \leftarrow \emph{key}$\\
-
-\textbf{Effect}\\
-Preconditions:\\ 
+Invariants:\\
 $State_i = \emph{live}$ \\
-
-Applies the effect on the object present in the snapshot \emph{dt} resulting in the creation of a new object-version.
-The object version is then added to the Effect Map of the live transaction.\\
-$\varepsilon \leftarrow key_{\tau}$
-
-\textbf{Commit transaction}\\
-Preconditions:\\ 
-$State_i = \emph{live}$ \\
-
-When a transaction is committed the system checks if the transaction is valid in regard to the consistency model chosen by the system.
-If everything is correct then the transaction is committed and the transaction is assigned a commit timestamp such as $Dt_i \leq Ct_i$.
-
-All the effects of the transaction are then available for transaction that have $Dt_j \geq Ct_i$.\\
+$Ct = null$
 
 Postconditions:\\
-$State_i \leftarrow \emph{terminated}$ \\
+$R_i = R \cup \{key\}$ \\
+
+
+\textbf{Effect} the system creates a new Object-version by merging the Object-version that is returned by \emph{read(key)} with the effect.
+
+Preconditions:\\ 
+$State_i = \emph{live}$ \\
+$Ct = null$
+
+Invariants:\\
+$State_i = \emph{live}$ \\
+$Ct = null$
+
+Postconditions:\\
+$\varepsilon_i = \varepsilon_i \cup \{(key, \tau_i)\}$ \\
+
+
+
+\textbf{Commit} the system checks if the effects $\varepsilon_i$ are valid in regards to the consistency model and abort if not. (Need more precision. Maybe earlier here does not seem to be the correct section)
+If the effects are valid the Objects versions are added to the Store and assigns a commit timestamp $Ct_i$.
+Finally the transaction's $State$ is set to $terminated$ making the effects visible in the store atomically.
+
+Preconditions:\\ 
+$State_i = \emph{live}$ \\
+$Ct = null$
+
+Postconditions:\\
+$Store = Store \cup \varepsilon_i$\\
+$State = terminated$\\
 $Dt_i \geq Ct_i$.\\
 
 
+\textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
 
-\textbf{Abort transaction}
 Preconditions:\\ 
-$\emph{State} = \emph{live}$ \\
-
-If a transaction is aborted then all the effects of the transaction are void.
+$State_i = \emph{live}$ \\
+$Ct = null$
 
 Postconditions:\\
-$State_i \leftarrow \emph{terminated}$ \\
+$State = terminated$\\
+$Ct = null$
+
 
 \subsection{Bounded Memory}
 
@@ -324,6 +395,6 @@ Finally we plan on designing test that specifically targets breaking invariants 
 \section{Conclusion}
 
 
-\bibliography{exemple}
+\bibliography{exemple,predef,shapiro-bib-ext,shapiro-bib-perso}
 
 \end{document}
