@@ -3,7 +3,7 @@
 %===========================================================
 % Une des quatre options 'parallelisme', 'architecture', 'systeme' 
 % 'tempsreel' doit être utilisée avec le style compas2021
-\documentclass[systeme]{compas2022}
+\documentclass[systeme,french,english]{compas2022}
 \usepackage{algorithm2e}
 
 %===========================================================
@@ -13,6 +13,7 @@
 \toappear{1} % Conserver cette ligne pour la version finale
 
 \begin{document}
+\selectlanguage{english}
 
 \title{Towards correct high-performance database systems}
 \shorttitle{Correct High-Performance DBMSs}
@@ -44,8 +45,7 @@
   From there, we plan to prove that the semantic model satisfies the
   invariants (proof in Coq), and to check that the implementation respects
   the model thanks to litmus-test cases.
-  Each following step adds a single feature, such as a cache, journaling,
-  sharding, or garbage collection.
+  Each following step adds a single feature.
   We formalise the feature, and expect to show formally and experimentally
   that the improved system simulates the simpler one.
   We expect that the features compose, so that the correctness of the full
@@ -62,26 +62,54 @@
     }
 \end{abstract}
 
-\tableofcontents
+% \tableofcontents
 
 %=========================================================
 \section{Introduction}
 %=========================================================
 
-Modern planet-scale applications increasingly use distributed database system to provide users with fast, available and consistent data.
-But existing database are built without any formalising in mind.
-They have bugs that impact the consistency and integrity of their data.
-We aim to build a database that is correct by design and performant.
-Formalising a database that provide users with fast read and writes, data safety and geo replication is hard.
-Instead of trying to formalize a database with all these features we propose the following approach.
-We decompose the database we are aiming for into simpler, smaller models.
-We adopt a stepwise approach starting with a bare-bones and obviously correct concurrent database system, then at each step we add features, like persistency, caching, checkpointing and geo-distribution. 
-Each step adds a single feature.
-For every step we describe its key invariants, formalize an operationnal semantics, and provide a reference implementation.
-Then we compare the different models between them and show through testing that the implementations are equivalent.
-Ultimately, we show that our final design is both correct and is equivalent to other equivalent databases in terms of perfomance.
-We claim to provide developers with a clear model that allows them to implement a correct, high performance and geo-distributed database.
+Modern online applications use a distributed database management
+system (DDBMS), to provide users with available and consistent data.
+The purpose of a DDBMS is conceptually simple: to store and retrieve
+shared data.
+However, for performance and fault-tolerance reasons, the internals of a
+typical database are very complex, with many moving parts that interact
+in hard-to-understand ways.
+Existing databases are designed in a manual and ad-hoc manner;
+inevitably, they have bugs that impact the consistency and integrity of
+data.
 
+The goal of this work is to build a database that is correct by design,
+while including some important optimisations (e.g., caching)
+and properties (e.g., fault tolerance).
+Formalising a database that provide users with fast read and writes,
+data safety and geo-replication is hard.
+Any attempt to verify at once some monolithic specification, including
+all the interesting properties, is probably doomed to failure.
+Instead, we propose the following incremental approach,  decompose the
+system into a set of small, orthogonal modules and features.
+
+Our starting baseline is a bare-bones and ``obviously correct'' DDBMS,
+restricted to its simplest function, i.e., transactions reading and
+writing data.
+We formalise its operational semantics and specify its invariants.
+We prove (in Coq) that the semantics satisfies the invariants.
+We also provide a (hand-written) reference implementation, and use test
+cases derived from the formal model to check that it follows the
+semantics and does not violate the invariants.
+
+Each design step adds a single feature, e.g., a cache or logging,
+with its associated operational semantics and invariants.
+We use simulation (or bisimulation) to show that the formal model is
+equivalent without and with the feature, modulo the added constraints.
+We take a similar approach with the reference implementation.
+Furthermore, we compare performance without and with the feature.
+
+Our ultimate aim is to show that the final design, including all the
+features, is both correct (by simulation of the baseline) and has
+comparable performance to ad-hoc database systems with similar features.
+We claim that providing developers with a clear model helps to implement
+a correct, high performance and geo-distributed database.
 
 %=========================================================
 \section{Interface and transactions}
