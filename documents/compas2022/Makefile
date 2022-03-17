@@ -122,7 +122,7 @@ push leave commit: manual
 #	unset LANG; svn commit -m ''
 	git commit -a -m '*' --allow-empty
 	git pull
-	git push origin master
+	git push
 
 arrive: update edit force show
 #	open fig/figures.key

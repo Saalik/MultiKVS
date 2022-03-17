@@ -14,16 +14,18 @@
 
 \begin{document}
 
-\title{Correct and high performance database}
-\shorttitle{TCC}
+\title{Towards correct high-performance database systems}
+\shorttitle{Correct High-Performance DBMSs}
 
-\author{Saalik Hatia}%
+\author{Saalik Hatia(1), Annette Bieniusa(2), Carla Ferreira(3), Gustavo Petri(4), Marc Shapiro(1)}
 
-\address{Université Pierre et Marie Curie\\
-Laboratoire LIP6 \\
-4, place jussieu\\
-75005 Paris - France\\
-saalik.hatia@lip6.fr}
+
+\address{
+  (1)~LIP6--Sorbonne-Université, Paris, France  \\
+  (2)~TU Kaiserslautern, Germany \\
+  (3)~Universidade NOVA de Lisboa, Portugal \\
+  (4)~ARM, Cambridge, United Kingdom\\
+  }
 
 \date{\today}
 
@@ -33,10 +35,31 @@ saalik.hatia@lip6.fr}
 %R\'esum\'e
 %===========================================================  
 \begin{abstract}
-  Le fichier fonctionne en \LaTeXe. La taille
-  de ce résumé peut atteindre une dizaine de lignes.
-  \MotsCles{un maximum de 5 mots significatifs, en français, doivent être 
-    isolés sous forme de mots-clés.}
+  Our goal is to design and implement a full-featured, high-performance
+  geo-distributed database that is correct by construction.
+  We adopt a stepwise approach.
+  We start from a simplistic concurrent database system; we formalise an
+  operational semantics and its key invariants; we also provide a
+  reference implementation and test cases exercising the invariants.
+  From there, we plan to prove that the semantic model satisfies the
+  invariants (proof in Coq), and to check that the implementation respects
+  the model thanks to litmus-test cases.
+  Each following step adds a single feature, such as a cache, journaling,
+  sharding, or garbage collection.
+  We formalise the feature, and expect to show formally and experimentally
+  that the improved system simulates the simpler one.
+  We expect that the features compose, so that the correctness of the full
+  system with all the features follows from the individual proofs.
+  At the time of writing, the operational semantics for several steps is
+  complete; the translation to Coq and the reference implementation are
+  ongoing.
+
+  \MotsCles{
+    système réparti,
+    base de données géo-distribuée,
+    vérification formelle,
+    test
+    }
 \end{abstract}
 
 \tableofcontents
