@@ -39,103 +39,104 @@ saalik.hatia@lip6.fr}
     isolés sous forme de mots-clés.}
 \end{abstract}
 
+\tableofcontents
+
 %=========================================================
 \section{Introduction}
 %=========================================================
 
 Modern planet-scale applications increasingly use distributed database system to provide users with fast, available and consistent data.
 But existing database are built without any formalising in mind.
-The have bugs that impact the consistency and integrity of their data.
-We want to build a database that has high-perfomance and is correct by design.
-Formalising a database the provide users with fast read-reads, data safety and geo replication is hard.
-Instead of trying to formalize a database with these features we use the following approach.
+They have bugs that impact the consistency and integrity of their data.
+We aim to build a database that is correct by design and performant.
+Formalising a database that provide users with fast read and writes, data safety and geo replication is hard.
+Instead of trying to formalize a database with all these features we propose the following approach.
 We decompose the database we are aiming for into simpler, smaller models.
-We adopt a stepwise approach starting with a bare-bones and obviouly correct concurrent database system, then at each step we add features, like persistency, caching, checkpointing and geo-distribution. 
+We adopt a stepwise approach starting with a bare-bones and obviously correct concurrent database system, then at each step we add features, like persistency, caching, checkpointing and geo-distribution. 
 Each step adds a single feature.
 For every step we describe its key invariants, formalize an operationnal semantics, and provide a reference implementation.
 Then we compare the different models between them and show through testing that the implementations are equivalent.
-Ultimately our final design is both correct and is equivalent to other equivalent database in terms of perfomance.
+Ultimately, we show that our final design is both correct and is equivalent to other equivalent databases in terms of perfomance.
 We claim to provide developers with a clear model that allows them to implement a correct, high performance and geo-distributed database.
 
 
 %=========================================================
-\section{Transaction and snapshots}
+\section{Interface and transactions}
 %=========================================================
-
-
-Transactions are used in most modern database as a mean to execute multiple reads and writes operation.
-Transactions are a set operation, reads and writes, that are terminated by an abort or a commit.
-Operations are either reads which are read from a snapshot called \emph{Dependency Snapshot} defined at that start of the transaction or writes that have an effect on said snapshot. Add determinism to the transaction.
-Visibility of these operations are defined by the consistency model used in the database.
-
-
-\subsection{Transaction representation}
-
-A transaction is represented using the following information:
-\begin{itemize}
-\item $\tau_i$ Unique transaction identifier.
-\item $Dt$ Dependency timestamp which represent a snapshot the transaction will interact with.
-\item $\varepsilon$ Effect map contains the writes made by the transactions.
-\item $R$ Read set which records the keys of objects read by the transaction.
-\item $Ct$ a commit timestamp that represent the time at which the timestamp has been committed.
-\item $State$ a value that is either $live$ or $terminated$ representing the state of the transaction.\\
-\end{itemize}
-
-There are three main phases in the lifecycle of a transacton.
-A transaction starts with a begin phase where the transaction is initialized, second the operational phase where the client execute operations and finally termination that ends the transaction.
-During these phases a transaction goes through two state, \emph{live} and \emph{terminated}.
-
-During the begin phase a transaction is assigned a unique identifier $\tau_i$ and a \emph{Dependency Snapshot Timestamp} ($dt$), while the Effect Map, Read Set and the commit timestamp are initialize at bottom ($\bot$).
-At the end of the begin phase a transaction's state is set to \emph{live}.
-
-During the operational phrase any number of arbitrary operations are executed.
-Every Read triggers an update of the Read Set $R_i$ and every write triggers an update of the Effect Map $\varepsilon_i$.
-
-Once all the operations are executed the transaction enters the termination phase where it either commits or abort depending on the client or the system invariants. 
-At the end of this phase the transaction's state is set to \emph{terminated}
-
-\subsection{Snapshot}
-
-Snapshots are a collection of transactions that are represented by a timestamp $St$.
-Each snapshot is composed of the transactions that have a commit timestamp $Ct \leq St$. 
-
-Snapshots provide \emph{isolation} guarantees to the system, meaning a Client only reads object versions that are part of the snapshot and are committed. 
-In addition to isolation, Snapshots also provide the client with \emph{atomicity} guarantees.
-Meaning the effects of $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
-
-\subsection{Object-version}
-
-The system maintains the following information about an object's version called Object-version: 
-\begin{itemize}
-  \item \emph{key} is the unique identifier of the object
-  \item \emph{$\tau_i$} identifier of the transaction this version is materilized from
-  \item \emph{blob} is a pointer to the value of the object materialized with the updates contained in the dependency snapshot of the transaction and its effect map
-\end{itemize}
-
-In this paper we will identify an Object-version in this manner $key_{\tau_i}$. \emph{(Bad wording)}
-
-\section{Model}
-
-% In order to model a the database we first define the main actors and interaction at play in a simple database.
-% A database is a collection of data and accessed by a client.
 
 We define two main actors in our system:
 \begin{itemize}
-  \item Client: Actor that interacts with a database using Application Programming Interfaces (APIs) exposed by the database
-  \item Database: Actor that host data that is read and written by the client.
+  \item A client: interacts with the database using Application Programming Interfaces (APIs) exposed by the database
+  \item Database: hosts data that is read and written by the client.\\
 \end{itemize}
 
-
-In this paper we will consider that connection to the database, and key discovery is out of scope.
-Therefore a Client will only interact with the database through transactions.
-To start and execute a transaction the Database exposes the following API:
+In this paper a client only interacts with the database through transactions, which are a sequence of read and write operations.
+The API is the following:
 \begin{itemize}
-\item \emph{begin()} initialize a transaction with a snapshot (\emph{Dt})
-\item \emph{read(key): blob} returns the object \emph{key} from the snapshot \emph{Dt}
-\item \emph{effect(key,blob)} assigns a the value \emph{blob} to the key \emph{key}
-\item \emph{abort()} abort the live transaction
-\item \emph{commit()} assign a commit timestamp to the transaction and ends the transaction.
+  \item \emph{begin(Dt)} initializes a transaction with a snapshot
+  \item \emph{read(key): blob} returns the object \emph{key} from the snapshot
+  \item \emph{effect(key,blob)} assigns a the value \emph{blob} to the key \emph{key}
+  \item \emph{abort()} abort the live transaction
+  \item \emph{commit()} attempts to commit, if it succeds assigns a commit timestamp to the transaction; otherwise the transaction aborts.
 \end{itemize}
+
+
+%=========================================================
+\subsection{Transactions}
+%=========================================================
+
+A transaction is a sequence of read and write operations followed by a commit or an abort.
+An operation is either a read or a write from the transaction's snapshot called \emph{Dependency Snapshot}.
+And the visibility of these operations are atomic at the time of commit.
+
+There are three main phases in the lifecycle of a transaction.
+A transaction starts with a begin phase where the transaction is initialized, in the operational phase the client executes operations and finally termination that ends the transaction.
+During these phases a transaction goes through two state, \emph{live} and \emph{terminated}.
+
+A transaction is represented using the following information:
+\begin{itemize}
+\item \emph{$\tau_i$} Unique transaction identifier.
+\item \emph{Dt} Dependency timestamp which represent a snapshot the transaction will interact with.
+\item \emph{$\varepsilon$} Effect map contains the writes made by the transactions.
+\item \emph{R} Read set which records the keys of objects read by the transaction.
+\item \emph{Ct} a commit timestamp that represent the time at which the timestamp has been committed.
+\item \emph{State} the state of the transaction is either \emph{live} or \emph{terminated}.\\
+\end{itemize}
+
+During the begin phase a transaction is assigned a unique identifier $\tau_i$ and a \emph{Dependency Snapshot Timestamp} ($Dt$), while the Effect Map, Read Set and the commit timestamp are initialized to \emph{null}. Finally the state of the transaction is set to \emph{live}.
+
+During the operation phase any number of operations are executed.
+A Read updates the Read Set $R_i$ and a write updates the Effect Map $\varepsilon_i$.
+
+In termination phase the transaction either commits or aborts depending on client and system invariants. 
+The transaction's state is then set to \emph{terminated}
+
+\subsection{Timestamps and snapshots}
+
+We use timestamps as method of concurrency control.
+Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
+It is used to perform arbitration on the order of the transactions.
+
+Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
+The latter is called the Dependency Snapshot Timestamp.
+
+Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
+In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
+
+\subsection{Object-version}
+
+Having only one version of an object severly limits concurrency in a database.
+Multi-Version Concurrency Control (MVCC) is a technique that allows a database to have multiple versions of an object (Object-Versions).
+Every update to an object creates its own version and to ensure that all transactions read the correct version of an object the system maintains the following information: 
+\begin{itemize}
+  \item \emph{key} is the unique identifier of the object.
+  \item \emph{$\tau_i$} identifier of the transaction that wrote this version.
+  \item \emph{blob} is a pointer to the value of the materialized object.
+\end{itemize}
+
+In this paper we note object-version by $(key ,\tau_i)$.
+
+\section{System Model}
 
 Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
 We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
@@ -149,16 +150,17 @@ We provide an implementation for every model and compare implementations between
 
 \subsection{Transactional Causal Consistency (TCC)}
 
-Our model can be provide multiple conssitency level but in this work we focus our effort on TCC for every model.
+Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
+TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
+
 To keep track of happened-before, we use timestamp to order updates.
-Our model only having one data center, it is logically sequential.
-When a transaction $\tau_i$ commits, it is assigned a timestamp that is the $Ct_i$.
-This timestamp represent the point of visibility for all the effects $\varepsilon_i$ of the transaction.
+When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
+These occur atomicallu with regard to any other transactions.
 If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
 
-Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.
+Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
 
-This model introduces our first system invariant which is that the commit timestamp of a transaction is always higher than the dependency timestamp.
+We introduce our first system invariant:
 
 \[
   \begin{array}{lcl}
@@ -167,6 +169,9 @@ This model introduces our first system invariant which is that the commit timest
 \]
 
 \subsection{Unbounded Memory}
+
+We start with a simple in-memory key-value store.
+All the database is stored in volatile memory therefore if a crash or restart occurs the database is lost.
 
 The Unbounded Memory model stores Object-version $key_{\tau_id}$ in memory.
 In adition to the object version the transaction information are also stored in memory in order to track information necessary to uphold our consistency guarantees.
@@ -270,51 +275,28 @@ When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningT
 And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
 
 
-\subsection{Garbage collection}
+
+\subsection{Garbage collectio - WIP}
 When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
 All the transaction in the system are halted in order to perform a garbage collection.
 
 Ici je dois expliquer comment est fait le GC:\\
 \begin{algorithm}
   \KwIn{\\ \Indp
-  RunningTr : set
+    RunningTr : set
   }
   \(oldTr \longleftarrow \emptyset\)\;
-  % \ForAll{$\tau_i$ $\in$ Running}{
-  %   \If{$Dt_i < MinDt$}{
-  %     \(oldTr \longleftarrow $\tau_i$\)\;
-  %   }
-  % }
+  \ForAll{\(\tau_{i} \in Running\)}{
+    \If{\(Dt_{i} < MinDt\)}{
+      \(oldTr \longleftarrow \tau_i\)\;
+    }
+  }
 \end{algorithm}
 
-% oldTr <- \{\}\\
-% For each $\tau_i$ $\in$ Running:\\
-%   if $Dt_i < MinDt$:\\
-
-  % \begin{algorithm}
-  %   \caption{Selection of relays, static MPR}
-  %   \KwIn{\\ \Indp
-  %     \(N_{1}\) : \textit{set}\\
-  %     \(N_{2}[]\) : \textit{map} (\(n_{i} \in\ N_{1}\)) \(\rightarrow \{n_{k},...\}\)
-  %   }
-  %   \(U \longleftarrow \bigcup\limits_{n_{i} \in N_{1}}\) \(N_{2}[n_{i}]\)\;
-  %   \(R \longleftarrow \emptyset\)\;
-  %   \ForAll{\(n_{i} \in N_{1}\)}{
-  %     \If{\(\exists n_{\text{iso}} \in N_{2}[n_{j}] \mid \forall n_{k \ne j}, n_{\text{iso}} \notin N_{2}[n_{k}]\)}{
-  %        \(R \longleftarrow R \cup \{n_{j}\}\)\;
-  %        \(U \longleftarrow U \setminus N_{2}[n_{j}]\)\;
-  %     }
-  %   }
-  %   \While{\(U \ne \emptyset\)}{
-  %     select \(n_{j} \in N_{1}\) maximizing \(\vert H_{2}[n_{j}] \cap U \vert\)\;
-  %     \(R \longleftarrow R \cup \{n_{j}\}\)\;
-  %     \(U \longleftarrow U \setminus N_{2}[n_{j}]\)\;
-  %   }
-  %   \Return{\(R\)}\;
-  % \end{algorithm}
+WIP
 
 
-\subsection{Implementation}
+\subsection{Implementation - WIP}
 
 Every model is implemented in java with external libraries for persistency, CRDTs and data structures that we consider being correct.
 Implementation and evaluation of the different models have two purposes.
