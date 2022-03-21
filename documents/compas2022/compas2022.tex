@@ -7,6 +7,7 @@
 % 'tempsreel' doit être utilisée avec le style compas2021
 \documentclass[systeme,french,english]{compas2022}
 \usepackage[utf8]{inputenc}
+<<<<<<< HEAD
 
 \usepackage{algorithm2e}
 \usepackage[T1]{fontenc} %% Vector fonts
@@ -14,7 +15,15 @@
 \usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
 \usepackage{xspace}  %% Macros with automatic spacing
 \usepackage[defblank]{paralist}  %% inline lists
+=======
+>>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 
+\usepackage{algorithm2e}
+\usepackage[T1]{fontenc} %% Vector fonts
+\usepackage[numbers,square,sort&compress]{natbib} %% Better bibliography
+\usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
+\usepackage{xspace}  %% Macros with automatic spacing
+\usepackage[defblank]{paralist}  %% inline lists
 %===========================================================
 %                               Title
 %===========================================================
@@ -39,7 +48,7 @@
 
 \date{\today}
 
-\maketitle
+% \maketitle
 
 %===========================================================         %
 %R\'esum\'e
@@ -71,34 +80,35 @@
     }
 \end{abstract}
 
-% \tableofcontents
+\tableofcontents
 
 %=========================================================
 \section{Introduction}
 %=========================================================
 
-Modern online applications use a distributed database management
-system (DDBMS), to provide users with available and consistent data.
-The purpose of a DDBMS is conceptually simple: to store and retrieve
+Modern online applications use a distributed database management system
+(DDBMS), whose storage backend provides users with available and
+consistent data.
+The purpose of a backend is conceptually simple: to store and retrieve
 shared data.
 However, for performance and fault-tolerance reasons, the internals of a
-typical database are very complex, with many moving parts that interact
+typical database backend are very complex, with many moving parts that interact
 in hard-to-understand ways.
-Existing databases are designed in a manual and ad-hoc manner;
+Existing backends are designed in a manual and ad-hoc manner;
 inevitably, they have bugs that impact the consistency and integrity of
 data.
 
-The goal of this work is to build a database that is correct by design,
-while including some important optimisations (e.g., caching)
-and properties (e.g., fault tolerance).
-Formalising a database that provide users with fast read and writes,
+The goal of this work is to build a database backend that is correct by
+design, while including some important optimisations (e.g., caching) and
+properties (e.g., fault tolerance).
+Formalising a backend that provide users with fast read and writes,
 data safety and geo-replication is hard.
-Any attempt to verify at once some monolithic specification, including
-all the interesting properties, is probably doomed to failure.
-Instead, we propose the following incremental approach,  decompose the
+Any attempt to verify at once some monolithic specification that
+includes all the interesting properties, is probably doomed to failure.
+Instead, we propose the an incremental approach,  decomposing the
 system into a set of small, orthogonal modules and features.
 
-Our starting baseline is a bare-bones and ``obviously correct'' DDBMS,
+Our starting baseline is a bare-bones and ``obviously correct'' backend,
 restricted to its simplest function, i.e., transactions reading and
 writing data.
 We formalise its operational semantics and specify its invariants.
@@ -123,7 +133,11 @@ a correct, high performance and geo-distributed database.
 \section{Transactions and timestamps}
 \label{sec:transactions}
 
+<<<<<<< HEAD
 A client of the DDBMS executes transactions.
+=======
+A client of the system executes transactions.
+>>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 Classically, a transaction is a sequence of reads and updates, bounded by
 a begin and an end.
 The transaction either aborts with no effects; or it commits and all its
@@ -152,7 +166,12 @@ serialisable or snapshot-isolation).
 For space reasons, this paper considers a single model, Transactional
 Causal Plus Consistency (TCC+), i.e., causal consistency with
 transactions and convergence \cite{rep:syn:sh228,rep:pro:sh182}.
+<<<<<<< HEAD
 Under TCC+, a snapshot must be a causally-consistent cut.
+=======
+Under TCC+, timestamps form a partial order (consistent with
+happened-before), and a snapshot must be a causally-consistent cut.
+>>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 Other transaction models differ by timestamp ordering being partial or
 total, and by constraints on beginning and committing a transaction.
 
@@ -160,13 +179,22 @@ The formal model represents a transaction with the following information:
 \begin{compactitem}
 \item $\tau$: unique transaction identifier.
 \item $\mathit{Dt}$: dependency timestamp.
+<<<<<<< HEAD
 \item {$\varepsilon$}: effect map, records the updates made by the transaction.
 \item ${R}$: read set, records the objects read by the transaction.
+=======
+\item {$\varepsilon$}: effect map, records the updates made by the
+  transaction.
+  A write updates the effect map.
+\item ${R}$: read set, records the objects read by the transaction.
+  A Read updates the read set.
+>>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 \item $\mathit{Ct}$: commit timestamp, assigned if and when the
   transaction commits.
 \item $\mathit{State}$: status, either \emph{not\_started}, \emph{live} or \emph{terminated}.\\
 \end{compactitem}
 
+<<<<<<< HEAD
 A Read updates the read set $R$; a write updates the effect map $\varepsilon$.
 
 
@@ -220,99 +248,188 @@ If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all th
 Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
 
 We introduce our first system invariant:
+=======
+% \subsection{Timestamps and snapshots}
 
-\[
-  \begin{array}{lcl}
-    \emph{$Dt_i < Ct_i$}
-  \end{array} 
-\]
+% We use timestamps as method of concurrency control.
+% Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
+% It is used to perform arbitration on the order of the transactions.
 
-\subsection{Unbounded Memory}
+% Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
+% The latter is called the Dependency Snapshot Timestamp.
 
-We start with a simple in-memory key-value store.
-All the database is stored in volatile memory therefore if a crash or restart occurs the database is lost.
+% Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
+% In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
 
-The Unbounded Memory model stores Object-version $key_{\tau_id}$ in memory.
-In adition to the object version the transaction information are also stored in memory in order to track information necessary to uphold our consistency guarantees.
+\subsection{Object-versions}
 
-Because this model is memory only, all data is lost is a crash or a restart happens.
-Therefore there are no invariants regarding persistency or recovery.
-Additionally we consider the memory to be unbounded so there are no restriction on the size of the data or constraints on the dependency timestamps.
+In order to be generic and agnostic to transaction model, our formalism
+considers that each update (or more precisely, the associated commit)
+creates a new version of the updated object.%
+%
+\footnote{
+%
+  This is compatible with Multi-Version Concurrency Control (MVCC), used
+  by many databases to increase parallelism, but does not mandate MVCC
+  in the implementation.
+}
+%
+As mentioned above, each such version is labelled with the commit
+timestamp of the corresponding transaction.
+A particular version of a particular object maps the pair
+$(\mathit{key},\mathit{Ct})$ to the corresponding value, which for the
+purposes of this paper is an untyped ``\emph{blob}.''
+In the above, $\mathit{key}$ is the unique identifier or key of the
+object, and $\mathit{Ct}$ is the commit timestamp of the transaction
+that writes this object-version.
 
-\subsection{Transaction invariants}
+% \section{Approach}
 
-For every transaction we define the following invariants.
-In order to ensure that every operation is done within a transaction our model require that each API call except \emph{begin()} checks if there is a $live$ transaction for the calling client.
+% Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
 
-When a transaction commit it is causally dependent on the Snapshot reprensented by $Dt$.
-We represent this by assigning a commit timestamp $Ct_i$ higher than the dependency timestamp.
+% We have two choices to start from:
+% \begin{itemize}
+%   \item An in-memory key-value store that stores operations in a sequential Journal.
+%   \item An in memory key-value store that create and store states.
+% \end{itemize}
+
+% To start we do not impose any constraints on the size of the memory footprint.
+% This allow use to focus only on transaction handling and the invariants that are associated with them.
+% From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
+% The different transitions are represented in figure 1 \ref{fig:transitions}.
+
+% \section{System Model}
+
+% Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
+% We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
+
+% \begin{figure}[tp]
+%   \centering
+%   \includegraphics[width=0.75\textwidth]{figures/transitions.png}
+%   \caption{Needs to be changed}
+%   \label{fig:transitions}
+% \end{figure}
+
+% \subsection{Transactional Causal Consistency (TCC)}
+
+% Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
+% TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
+
+% To keep track of happened-before, we use timestamp to order updates.
+% When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
+% These occur atomicallu with regard to any other transactions.
+% If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
+
+% Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
+
+% We introduce our first system invariant:
+
+% \[
+%   \begin{array}{lcl}
+%     \emph{$Dt_i < Ct_i$}
+%   \end{array} 
+% \]
+
+\section{Intuitive model}
+
+We start with an intuitive simple in-memory key-value store.
+Therefore if a crash or restart occurs the database is lost.
+In this section we present the semantics from the viewpoint of the system.
+The general behavior describe in this section is as follows.
+A client starts a transaction and execute a sequence of operations and tries to commit or abort the transaction.
+This means all operations executed by the client must be part of a \emph{live} transaction.
+This also include the commit and abort call.
+Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
+>>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 
 These are the transaction invariants maintained during transactions:
 \[
   \begin{array}{lcl}
-    \emph{$Dt_i < Ct_i$}\\
+    \emph{$Ct \neq null => Dt_i > Ct_i$}\\
     \emph{$(read, effect, commit, abort) => State = live$}
   \end{array} 
 \]
 
 
-TODO Le premier invariant est un peu faible tout seul. Il faut ajouter le fait qu'il est valable pour toutes transactions committées. Les sections suivantes sont sous forme de texte mais elle seront mise sous forme de pseudo code avec les precondition et les invariants.\\
 
-
-\textbf{Start transaction}
+\textbf{Start transaction} (Session part missing)
 When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
-If no dependency timestamp is specified than the transaction is initialized with a valid dependency timestamp.
-The transaction is then assigned a unique transaction identifier $\tau_i$ and $\emph{State} \leftarrow \emph{live}$ \\
+If no dependency timestamp is specified than system assign a valid snapshot to the transaction.
+(On parle de l'implémentation de ce mécanisme plus tard)
+The transaction is then assigned a unique transaction identifier $\tau_i$ and $\emph{State} \leftarrow \emph{live}$.
+Here are the preconditions, invariants and postconditions:
+(Alt) From these requirement we extract the following preconditions:
+
+Preconditions:\\
+$State \neq live$
+$Ct = null$
+
+Invariants:\\
+\emph{$Ct \neq null => Dt_i > Ct_i$}\\
+$Ct = null$
 
 Postconditions:\\
-$State_i \leftarrow \emph{live}$ \\
+$State_i = \emph{live}$ \\
+$Ct = null$
 
 
-\textbf{Read}\\
+\textbf{Read} returns the correct Object-version in the store that is valid in regads to our consistency model.
+If two conccurent Object-versions exist, meaning they are part of two transaction that have a commit timestamp lower or equal than the dependency timestamp and are not related by precedence.
+(NOTE: première fois que j'en parle)
+We use a deterministic algorithm, ie. merge or LWW, to choose the Object-version returned.
+In case there are no existing Object-version in memory we return a default value.
+Finally the system adds the key to the read set $R_i$ of the transaction. 
+
 Preconditions:\\ 
 $State_i = \emph{live}$ \\
+$Ct = null$
 
-Returns the Object-version k from the snapshot \emph{Dt}. 
-If the object doesn't exist the system returns a default value.
-
-In case a transaction attempts to read an object that has concurrent updates, we use CRDTs in order to ensure that the merge is determistic.
-The system adds the key to the read set of the live transaction.\\
-$R_i \leftarrow \emph{key}$\\
-
-\textbf{Effect}\\
-Preconditions:\\ 
+Invariants:\\
 $State_i = \emph{live}$ \\
-
-Applies the effect on the object present in the snapshot \emph{dt} resulting in the creation of a new object-version.
-The object version is then added to the Effect Map of the live transaction.\\
-$\varepsilon \leftarrow key_{\tau}$
-
-\textbf{Commit transaction}\\
-Preconditions:\\ 
-$State_i = \emph{live}$ \\
-
-When a transaction is committed the system checks if the transaction is valid in regard to the consistency model chosen by the system.
-If everything is correct then the transaction is committed and the transaction is assigned a commit timestamp such as $Dt_i \leq Ct_i$.
-
-All the effects of the transaction are then available for transaction that have $Dt_j \geq Ct_i$.\\
+$Ct = null$
 
 Postconditions:\\
-$State_i \leftarrow \emph{terminated}$ \\
+$R_i = R \cup \{key\}$ \\
+
+\textbf{Effect} the system creates a new Object-version by merging the Object-version that is returned by \emph{read(key)} with the effect.
+
+Preconditions:\\ 
+$State_i = \emph{live}$ \\
+$Ct = null$
+
+Invariants:\\
+$State_i = \emph{live}$ \\
+$Ct = null$
+
+Postconditions:\\
+$\varepsilon_i = \varepsilon_i \cup \{(key, \tau_i)\}$ \\
+
+\textbf{Commit} the system checks if the effects $\varepsilon_i$ are valid in regards to the consistency model and abort if not. (Need more precision. Maybe earlier here does not seem to be the correct section)
+If the effects are valid the Objects versions are added to the Store and assigns a commit timestamp $Ct_i$.
+Finally the transaction's $State$ is set to $terminated$ making the effects visible in the store atomically.
+
+Preconditions:\\ 
+$State_i = \emph{live}$ \\
+$Ct = null$
+
+Postconditions:\\
+$Store = Store \cup \varepsilon_i$\\
+$State = terminated$\\
 $Dt_i \geq Ct_i$.\\
 
+\textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
 
-
-\textbf{Abort transaction}
 Preconditions:\\ 
-$\emph{State} = \emph{live}$ \\
-
-If a transaction is aborted then all the effects of the transaction are void.
+$State_i = \emph{live}$ \\
+$Ct = null$
 
 Postconditions:\\
-$State_i \leftarrow \emph{terminated}$ \\
+$State = terminated$\\
+$Ct = null$
 
 \subsection{Bounded Memory}
 
+Unbounded memory is not realistic in a real system.
 In the Bounded Memory model we choose to define an arbitrary limitation on the size of the memory used by the system.
 
 \textbf{System invariants}
@@ -332,8 +449,6 @@ We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
 \emph{MinDt} represents the oldest snapshot any running transaction is reading from.
 When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningTr}. 
 And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
-
-
 
 \subsection{Garbage collectio - WIP}
 When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
@@ -368,7 +483,11 @@ Finally we plan on designing test that specifically targets breaking invariants 
 \section{Conclusion}
 
 
+<<<<<<< HEAD
 \bibliography{predef,shapiro-bib-ext,shapiro-bib-perso}
 
+=======
+\bibliography{exemple,predef,shapiro-bib-ext,shapiro-bib-perso}
+>>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 
 \end{document}
