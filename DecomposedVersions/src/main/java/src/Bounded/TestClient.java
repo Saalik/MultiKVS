@@ -1,15 +1,16 @@
-package Reference;
+package Bounded;
 
-
+import Journal.Client;
+import Journal.KeyValueStore;
 import Types.TransactionID;
 
 public class TestClient {
     public static void main(String[] args) {
         KeyValueStore kvs = new KeyValueStore();
         Client client = new Client(kvs);
-        TransactionID dependency1 ;
-        TransactionID dependency2 ;
-        TransactionID dependency3 ;
+        TransactionID dependency1;
+        TransactionID dependency2;
+        TransactionID dependency3;
         int key1 = 1;
         int key2 = 2;
         int key3 = 3;
@@ -60,7 +61,6 @@ public class TestClient {
         for (int i= 0; i < 100 ; i++) {
             client.effect("key4", 1);
         }
-        System.out.println(client.get("key4"));
         TransactionID dependency4 = client.commitTransaction();
 
         client.startTransaction(dependency4);
@@ -69,20 +69,20 @@ public class TestClient {
 
         System.out.println("Test 4 passed");
 
-//        System.out.println("Test 5: Writing a 100 times in different transactions");
-//
-//        TransactionID dependency5 = null;
-//        for (int i= 0; i < 100 ; i++) {
-//            client.startTransaction();
-//            client.effect("key5", 1);
-//            dependency5 = client.commitTransaction();
-//        }
-//
-//        client.startTransaction(dependency5);
-//        assertEqual(client.get("key5"), 100);
-//        client.abort();
-//
-//        System.out.println("Test 5 passed");
+        System.out.println("Test 5: Writing a 100 times in different transactions");
+
+        TransactionID dependency5 = null;
+        for (int i= 0; i < 100 ; i++) {
+            client.startTransaction();
+            client.effect("key5", 1);
+            dependency5 = client.commitTransaction();
+        }
+
+        client.startTransaction(dependency5);
+        assertEqual(client.get("key5"), 100);
+        client.abort();
+
+        System.out.println("Test 5 passed");
 
         client.interrupt();
         try {
@@ -91,7 +91,7 @@ public class TestClient {
             e.printStackTrace();
         }
 
-        System.out.println("Journal: Test finished");
+        System.out.println("Multimap: Test finished");
 
     }
 

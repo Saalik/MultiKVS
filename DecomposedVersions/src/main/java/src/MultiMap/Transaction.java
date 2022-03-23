@@ -1,51 +1,67 @@
 package MultiMap;
 
+import Types.Timestamps;
 import Types.TransactionID;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class Transaction {
-        private TransactionID id;
-        private TransactionID dependency;
-        private HashMap<String, Value> operations;
-        private KeyValueStore kvs;
+    // Unique by definition
+    private TransactionID id;
+    // Identifies the transactions this one depends upon
+    private Timestamps dependency;
+    // records the content of the transaction’s writes
+    private HashMap<String, Value> effectMap;
+    // records what objects the transaction has read
+    private CopyOnWriteArraySet<String> readSet;
+    // time of commit
+    private Timestamps commit;
+
+    private KeyValueStore kvs;
 
     public Transaction(KeyValueStore kvs){
         id = new TransactionID(UUID.randomUUID().toString());
+        effectMap = new HashMap<>();
+        readSet = new CopyOnWriteArraySet<>();
         dependency = kvs.getLastTransactionID();;
-        operations = new HashMap<>();
+        effectMap = new HashMap<>();
         this.kvs = kvs;
     }
 
     public Transaction(KeyValueStore kvs, TransactionID dependency) {
         id = new TransactionID(UUID.randomUUID().toString());
         this.dependency = dependency;
-        operations = new HashMap<>();
+        effectMap = new HashMap<>();
         this.kvs = kvs;
     }
 
-    public void put(String key, int value) {
+
+    //
+    public void effect(String key, int value) {
         Value newValue = null;
 
-        if (operations.containsKey(key)) {
-            Value oldValue = operations.get(key);
+        if (effectMap.containsKey(key)) {
+            Value oldValue = effectMap.get(key);
             newValue = new Value(id, oldValue.getValue() + value);
-            operations.put(key, newValue);
+            effectMap.put(key, newValue);
         } else {
             Value oldVal = kvs.getValue(key, dependency);
             if (oldVal != null) {
                 newValue = new Value(id, value + oldVal.getValue());
-                operations.put(key, newValue);
+                effectMap.put(key, newValue);
             } else {
-                operations.put(key, new Value(id, value));
+                effectMap.put(key, new Value(id, value));
             }
         }
     }
 
     // TODO : This might return a null value
     public int get(String key) {
-        Value value = operations.get(key);
+        Value value = effectMap.get(key);
         if (value != null) {
             return value.getValue();
         } else {
@@ -61,7 +77,7 @@ public class Transaction {
         return dependency;
     }
 
-    public HashMap<String, Value> getOperations() {
-        return operations;
+    public HashMap<String, Value> getEffectMap() {
+        return effectMap;
     }
 }

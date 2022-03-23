@@ -55,6 +55,7 @@ public class Client extends Thread implements KVSClient {
     }
 
     public TransactionID commitTransaction (){
+        // CheckArgument == Assertion
         checkArgument(tr != null, "Transaction not started");
         if (tr.getOperations().isEmpty()){
             System.out.println("Nothing to commit");

@@ -1,4 +1,4 @@
-package MultiMap;
+package Bounded;
 
 import Types.TransactionID;
 import com.google.common.collect.HashMultimap;
@@ -10,7 +10,7 @@ import java.util.HashMap;
 
 public class KeyValueStore {
     TransactionID lastTransactionID;
-    Multimap<String, Value> backend;
+    Multimap<String, Bounded.Value> backend;
     MutableGraph<TransactionID> dependencyGraph;
 
 
@@ -19,13 +19,13 @@ public class KeyValueStore {
         dependencyGraph = GraphBuilder.directed().build();
     }
 
-    public void commitTransaction (Transaction tr) {
+    public void commitTransaction (Bounded.Transaction tr) {
         dependencyGraph.addNode(tr.getId());
         if (tr.getDependency() != null) {
             dependencyGraph.putEdge(tr.getDependency(), tr.getId());
         }
 
-        HashMap<String, Value> operations = tr.getEffectMap();
+        HashMap<String, Bounded.Value> operations = tr.getOperations();
 
         for (String key : operations.keySet()) {
             backend.put(key, operations.get(key));
@@ -33,13 +33,13 @@ public class KeyValueStore {
 
     }
 
-    public Value getValue (String key, TransactionID transactionID) {
+    public Bounded.Value getValue (String key, TransactionID transactionID) {
         boolean stopSearch = false;
 
         TransactionID trID = transactionID;
         if (backend.containsKey(key)) {
             while ( ! stopSearch ) {
-                for (Value value : backend.get(key)) {
+                for (Bounded.Value value : backend.get(key)) {
                     if (value.getTransactionID().equals(trID)) {
                         return value;
                     }

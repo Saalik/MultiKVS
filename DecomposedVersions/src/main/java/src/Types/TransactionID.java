@@ -1,14 +1,16 @@
 package Types;
 
+import java.util.UUID;
+
 public class TransactionID{
 
-    private final String trID;
+    private final UUID trID;
 
     public TransactionID (String str) {
-        trID = str;
+        trID = java.util.UUID.randomUUID();;
     }
 
-    public String getTrID() {
+    public UUID getTrID() {
         return trID;
     }
 
