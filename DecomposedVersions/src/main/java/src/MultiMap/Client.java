@@ -1,43 +1,45 @@
 package MultiMap;
 import Interfaces.KVSClient;
+import Types.Timestamps;
 import Types.TransactionID;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 
 public class Client extends Thread implements KVSClient {
-    private TransactionID dependency;
-    private TransactionID lastTransactionID;
+    private Timestamps dependency;
+    private Timestamps lastCommit;
     private Transaction tr;
     private KeyValueStore kvs;
 
     public Client (KeyValueStore kvs) {
         this.kvs = kvs;
-        dependency = kvs.getLastTransactionID();
+        dependency = kvs.getLastTransactionTimestamp();
         tr = null;
-        lastTransactionID = dependency;
+        lastCommit = dependency;
     }
 
     public void run () {}
 
     @Override
-    public void startTransaction() {
+    public void beginTransaction() {
         checkArgument(tr == null, "Transaction already started");
-        if (lastTransactionID == null) {
+        if (lastCommit == null) {
             tr = new Transaction(kvs);
         } else {
-            tr = new Transaction(kvs, lastTransactionID);
+            tr = new Transaction(kvs, lastCommit);
         }
 
     }
 
     @Override
-    public void startTransaction(TransactionID dependency) {
+    public void beginTransaction(TransactionID dependency) {
         checkArgument(tr == null, "Transaction already started");
-        if (kvs.transactionIDExist(dependency)){
+        if (kvs.dependencyIsValid(dependency)){
             tr = new Transaction(kvs, dependency);
         }else{
-            System.out.println("MemoryKVS.Transaction does not exist ! Please retry with a correct transaction identifier");
+            System.out.println("Dependency is not valid ! " +
+                    "Please retry with a correct transaction identifier");
         }
     }
 
@@ -62,9 +64,9 @@ public class Client extends Thread implements KVSClient {
             return null;
         } else {
             kvs.commitTransaction(tr);
-            lastTransactionID = tr.getId();
+            lastCommit = tr.getId();
             tr = null;
-            return lastTransactionID;
+            return lastCommit;
         }
     }
 

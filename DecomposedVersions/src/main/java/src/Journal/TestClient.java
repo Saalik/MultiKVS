@@ -16,7 +16,7 @@ public class TestClient {
         client.start();
 
         System.out.println("Test 1: Add a key-value pair");
-        client.startTransaction();
+        client.beginTransaction();
         client.effect("key1", 1);
         client.effect("key2", 2);
         client.effect("key3", 3);
@@ -28,7 +28,7 @@ public class TestClient {
         System.out.println("Test 1 passed");
 
         System.out.println("Test 2: Add a key-value pair and then read new value");
-        client.startTransaction();
+        client.beginTransaction();
         assertEqual(client.get("key1"), key1);
         key1 += 4;
         client.effect("key1", 4);
@@ -40,7 +40,7 @@ public class TestClient {
         System.out.println("Test 2 passed");
 
         System.out.println("Test 3: Add a key-value pair and read from an older dependency");
-        client.startTransaction();
+        client.beginTransaction();
         assertEqual(client.get("key1"), key1);
         key1 += 4;
         client.effect("key1", 4);
@@ -49,7 +49,7 @@ public class TestClient {
         assertEqual(client.get("key3"), key3);
         dependency3 = client.commitTransaction();
 
-        client.startTransaction(dependency2);
+        client.beginTransaction(dependency2);
         assertNotEqual(client.get("key1"), key1);
         client.commitTransaction();
         System.out.println("Test 3 passed");
@@ -57,13 +57,13 @@ public class TestClient {
 
         System.out.println("Test 4: Writing a 100 times in a single transaction");
 
-        client.startTransaction();
+        client.beginTransaction();
         for (int i= 0; i < 100 ; i++) {
             client.effect("key4", 1);
         }
         TransactionID dependency4 = client.commitTransaction();
 
-        client.startTransaction(dependency4);
+        client.beginTransaction(dependency4);
         assertEqual(client.get("key4"), 100);
         client.abort();
 
@@ -73,12 +73,12 @@ public class TestClient {
 
         TransactionID dependency5 = null;
         for (int i= 0; i < 100 ; i++) {
-            client.startTransaction();
+            client.beginTransaction();
             client.effect("key5", 1);
             dependency5 = client.commitTransaction();
         }
 
-        client.startTransaction(dependency5);
+        client.beginTransaction(dependency5);
         assertEqual(client.get("key5"), 100);
         client.abort();
 

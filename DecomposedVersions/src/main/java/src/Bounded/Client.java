@@ -21,7 +21,7 @@ public class Client extends Thread implements KVSClient {
     public void run () {}
 
     @Override
-    public void startTransaction() {
+    public void beginTransaction() {
         checkArgument(tr == null, "Transaction already started");
         if (lastTransactionID == null) {
             tr = new Bounded.Transaction(kvs);
@@ -32,7 +32,7 @@ public class Client extends Thread implements KVSClient {
     }
 
     @Override
-    public void startTransaction(TransactionID dependency) {
+    public void beginTransaction(TransactionID dependency) {
         checkArgument(tr == null, "Transaction already started");
         if (kvs.transactionIDExist(dependency)){
             tr = new Bounded.Transaction(kvs, dependency);
@@ -43,9 +43,9 @@ public class Client extends Thread implements KVSClient {
 
 
     @Override
-    public void effect(String key, int value){
+    public void effect(String key, Value value){
         checkArgument(tr != null, "Transaction not started");
-        tr.put(key, value);
+        tr.effect(key, value);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class Client extends Thread implements KVSClient {
     @Override
     public TransactionID commitTransaction(){
         checkArgument(tr != null, "Transaction not started");
-        if (tr.getOperations().isEmpty()){
+        if (tr.getEffectMap().isEmpty()){
             System.out.println("Nothing to commit");
             return null;
         } else {

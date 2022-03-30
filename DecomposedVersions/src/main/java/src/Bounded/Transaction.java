@@ -1,55 +1,74 @@
 package Bounded;
 
+import Types.Timestamps;
 import Types.TransactionID;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class Transaction {
-        private TransactionID id;
-        private TransactionID dependency;
-        private HashMap<String, Bounded.Value> operations;
-        private Bounded.KeyValueStore kvs;
+    // Unique by definition
+    private TransactionID id;
+    // Identifies the transactions this one depends upon
+    private Timestamps dependency;
+    // records the content of the transaction’s writes
+    private HashMap<String, Value> effectMap;
+    // records what objects the transaction has read
+    private CopyOnWriteArraySet<String> readSet;
+    // time of commit
+    private Timestamps commit;
 
-    public Transaction(Bounded.KeyValueStore kvs){
+    private Bounded.KeyValueStore backend;
+
+    public Transaction(Bounded.KeyValueStore backend){
         id = new TransactionID(UUID.randomUUID().toString());
-        dependency = kvs.getLastTransactionID();;
-        operations = new HashMap<>();
-        this.kvs = kvs;
+        dependency = backend.getLastTransactionID();;
+        effectMap = new HashMap<>();
+        this.backend = backend;
     }
 
-    public Transaction(Bounded.KeyValueStore kvs, TransactionID dependency) {
+    public Transaction(Bounded.KeyValueStore backend, Timestamps dependency) {
         id = new TransactionID(UUID.randomUUID().toString());
         this.dependency = dependency;
-        operations = new HashMap<>();
-        this.kvs = kvs;
+        effectMap = new HashMap<>();
+        this.backend = backend;
     }
 
-    public void put(String key, int value) {
-        Bounded.Value newValue = null;
+    public void effect(String key, Value value) {
+        checkArgument(backend.sizeAvailable(), "Memory size limit reached");
 
-        if (operations.containsKey(key)) {
-            Bounded.Value oldValue = operations.get(key);
-            newValue = new Bounded.Value(id, oldValue.getValue() + value);
-            operations.put(key, newValue);
-        } else {
-            Bounded.Value oldVal = kvs.getValue(key, dependency);
-            if (oldVal != null) {
-                newValue = new Bounded.Value(id, value + oldVal.getValue());
-                operations.put(key, newValue);
+        @Nullable
+        Value newValue = null;
+        try {
+            if (effectMap.containsKey(key)) {
+                Value oldValue = effectMap.get(key);
+                newValue = Value.merge(oldValue ,value);
+                effectMap.put(key, newValue);
             } else {
-                operations.put(key, new Bounded.Value(id, value));
+                Bounded.Value oldValue = backend.getValue(key, dependency);
+                if (oldValue != null) {
+                    newValue = Value.merge(oldValue ,value);
+                    effectMap.put(key, newValue);
+                } else {
+                    effectMap.put(key, new Value(id, value));
+                }
             }
+        } finally {
+            checkArgument(effectMap.containsValue(newValue), "Value was not added to effectMap");
         }
     }
+    
 
-    // TODO : This might return a null value
     public int get(String key) {
-        Bounded.Value value = operations.get(key);
+        Bounded.Value value = effectMap.get(key);
         if (value != null) {
             return value.getValue();
         } else {
-            return kvs.getValue(key, dependency).getValue();
+            return backend.getValue(key, dependency).getValue();
         }
     }
 
@@ -61,7 +80,7 @@ public class Transaction {
         return dependency;
     }
 
-    public HashMap<String, Bounded.Value> getOperations() {
-        return operations;
+    public HashMap<String, Bounded.Value> getEffectMap() {
+        return effectMap;
     }
 }

@@ -1,5 +1,6 @@
 package MultiMap;
 
+import Types.Timestamps;
 import Types.TransactionID;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -9,7 +10,7 @@ import com.google.common.graph.MutableGraph;
 import java.util.HashMap;
 
 public class KeyValueStore {
-    TransactionID lastTransactionID;
+    Timestamps lastTransactionTimestamp;
     Multimap<String, Value> backend;
     MutableGraph<TransactionID> dependencyGraph;
 
@@ -17,6 +18,7 @@ public class KeyValueStore {
     public KeyValueStore() {
         backend = HashMultimap.create();
         dependencyGraph = GraphBuilder.directed().build();
+        lastTransactionTimestamp = null;
     }
 
     public void commitTransaction (Transaction tr) {
@@ -33,8 +35,9 @@ public class KeyValueStore {
 
     }
 
-    public Value getValue (String key, TransactionID transactionID) {
+    public Value getValue (String key, Timestamps dependency) {
         boolean stopSearch = false;
+        Timestamps dependencyTimestamp = dependency;
 
         TransactionID trID = transactionID;
         if (backend.containsKey(key)) {
@@ -57,11 +60,11 @@ public class KeyValueStore {
         return null;
     }
 
-    public TransactionID getLastTransactionID() {
-        return lastTransactionID;
+    public Timestamps getLastTransactionTimestamp() {
+        return lastTransactionTimestamp;
     }
 
-    public boolean transactionIDExist(TransactionID transactionID) {
+    public boolean dependencyIsValid(TransactionID transactionID) {
         return dependencyGraph.nodes().contains(transactionID);
     }
 

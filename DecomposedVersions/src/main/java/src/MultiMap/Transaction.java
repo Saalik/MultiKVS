@@ -25,14 +25,14 @@ public class Transaction {
 
     public Transaction(KeyValueStore kvs){
         id = new TransactionID(UUID.randomUUID().toString());
+        dependency = kvs.getLastTransactionTimestamp()  ;;
         effectMap = new HashMap<>();
         readSet = new CopyOnWriteArraySet<>();
-        dependency = kvs.getLastTransactionID();;
         effectMap = new HashMap<>();
         this.kvs = kvs;
     }
 
-    public Transaction(KeyValueStore kvs, TransactionID dependency) {
+    public Transaction(KeyValueStore kvs, Timestamps dependency) {
         id = new TransactionID(UUID.randomUUID().toString());
         this.dependency = dependency;
         effectMap = new HashMap<>();
@@ -73,7 +73,7 @@ public class Transaction {
         return id;
     }
 
-    public TransactionID getDependency() {
+    public Timestamps getDependency() {
         return dependency;
     }
 

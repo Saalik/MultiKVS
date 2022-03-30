@@ -1,5 +1,6 @@
 package Interfaces;
 
+import Bounded.Value;
 import Types.TransactionID;
 
 public interface KVSClient {
@@ -9,15 +10,15 @@ public interface KVSClient {
     /** Precondition:
      *  The snapshot is valid in regards to the consistency model
      */
-    void startTransaction();
+    void beginTransaction();
 
     /** Precondition:
      *  The snapshot is valid in regards to the consistency model
      */
-    void startTransaction(TransactionID dependency);
+    void beginTransaction(TransactionID dependency);
 
 
-    void effect(String key, int value);
+    void effect(String key, Value value);
 
     int get(String key);
 

@@ -16,6 +16,10 @@ public class Value {
         return value;
     }
 
+    static public Value merge(Value one, Value two) {
+        return new Value (two.getTransactionID(), one.getValue()+two.getValue());
+    }
+
     public TransactionID getTransactionID() {
         return transactionId;
     }

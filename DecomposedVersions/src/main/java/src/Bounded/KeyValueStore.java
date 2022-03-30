@@ -1,5 +1,6 @@
 package Bounded;
 
+import Types.Timestamps;
 import Types.TransactionID;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -9,14 +10,20 @@ import com.google.common.graph.MutableGraph;
 import java.util.HashMap;
 
 public class KeyValueStore {
+    static final int MLIMIT = 100;
+
     TransactionID lastTransactionID;
-    Multimap<String, Bounded.Value> backend;
+    Multimap<String, Value> backend;
     MutableGraph<TransactionID> dependencyGraph;
+
+    Timestamps minDependency;
+
 
 
     public KeyValueStore() {
         backend = HashMultimap.create();
         dependencyGraph = GraphBuilder.directed().build();
+        minDependency = null;
     }
 
     public void commitTransaction (Bounded.Transaction tr) {
@@ -25,7 +32,7 @@ public class KeyValueStore {
             dependencyGraph.putEdge(tr.getDependency(), tr.getId());
         }
 
-        HashMap<String, Bounded.Value> operations = tr.getOperations();
+        HashMap<String, Bounded.Value> operations = tr.getEffectMap();
 
         for (String key : operations.keySet()) {
             backend.put(key, operations.get(key));
@@ -63,6 +70,11 @@ public class KeyValueStore {
 
     public boolean transactionIDExist(TransactionID transactionID) {
         return dependencyGraph.nodes().contains(transactionID);
+    }
+
+    public boolean sizeAvailable() {
+        int mUsed = backend.size();
+        return mUsed <= MLIMIT;
     }
 
 }

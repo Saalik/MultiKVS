@@ -22,7 +22,7 @@ public class Client extends Thread implements KVSClient {
 
     }
 
-    public void startTransaction () {
+    public void beginTransaction() {
         if (tr == null) {
             if (lastTransactionID == null) {
                 tr = new Transaction(kvs);
@@ -35,7 +35,7 @@ public class Client extends Thread implements KVSClient {
         }
     }
 
-    public void startTransaction(TransactionID dependency) {
+    public void beginTransaction(TransactionID dependency) {
         if (tr == null) {
             if (kvs.getTransaction(dependency) != null){
                 tr = new Transaction(kvs, dependency);
