@@ -1,6 +1,6 @@
 package Bounded;
 
-import Types.Timestamps;
+import Types.Timestamp;
 import Types.TransactionID;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -16,7 +16,7 @@ public class KeyValueStore {
     Multimap<String, Value> backend;
     MutableGraph<TransactionID> dependencyGraph;
 
-    Timestamps minDependency;
+    Timestamp minDependency;
 
 
 

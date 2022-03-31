@@ -1,11 +1,10 @@
 package MultiMap;
 
-import Types.Timestamps;
+import Types.Timestamp;
 import Types.TransactionID;
+import Types.Value;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -13,13 +12,13 @@ public class Transaction {
     // Unique by definition
     private TransactionID id;
     // Identifies the transactions this one depends upon
-    private Timestamps dependency;
+    private Timestamp dependency;
     // records the content of the transaction’s writes
     private HashMap<String, Value> effectMap;
     // records what objects the transaction has read
     private CopyOnWriteArraySet<String> readSet;
     // time of commit
-    private Timestamps commit;
+    private Timestamp commit;
 
     private KeyValueStore kvs;
 
@@ -32,13 +31,16 @@ public class Transaction {
         this.kvs = kvs;
     }
 
-    public Transaction(KeyValueStore kvs, Timestamps dependency) {
+    public Transaction(KeyValueStore kvs, Timestamp dependency) {
         id = new TransactionID(UUID.randomUUID().toString());
         this.dependency = dependency;
         effectMap = new HashMap<>();
         this.kvs = kvs;
     }
 
+    public void setCommit(Timestamp commit) {
+        this.commit = commit;
+    }
 
     //
     public void effect(String key, int value) {
@@ -73,7 +75,15 @@ public class Transaction {
         return id;
     }
 
-    public Timestamps getDependency() {
+    public CopyOnWriteArraySet<String> getReadSet() {
+        return readSet;
+    }
+
+    public Timestamp getCommit() {
+        return commit;
+    }
+
+    public Timestamp getDependency() {
         return dependency;
     }
 

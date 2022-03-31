@@ -1,6 +1,6 @@
 package Bounded;
 
-import Types.Timestamps;
+import Types.Timestamp;
 import Types.TransactionID;
 
 import javax.annotation.Nullable;
@@ -14,13 +14,13 @@ public class Transaction {
     // Unique by definition
     private TransactionID id;
     // Identifies the transactions this one depends upon
-    private Timestamps dependency;
+    private Timestamp dependency;
     // records the content of the transaction’s writes
     private HashMap<String, Value> effectMap;
     // records what objects the transaction has read
     private CopyOnWriteArraySet<String> readSet;
     // time of commit
-    private Timestamps commit;
+    private Timestamp commit;
 
     private Bounded.KeyValueStore backend;
 
@@ -31,7 +31,7 @@ public class Transaction {
         this.backend = backend;
     }
 
-    public Transaction(Bounded.KeyValueStore backend, Timestamps dependency) {
+    public Transaction(Bounded.KeyValueStore backend, Timestamp dependency) {
         id = new TransactionID(UUID.randomUUID().toString());
         this.dependency = dependency;
         effectMap = new HashMap<>();

@@ -2,10 +2,11 @@ package Types;
 
 import java.time.Instant;
 
-public class Timestamps {
+public class Timestamp {
     Instant timestamp;
 
-    public Timestamps() {
+
+    public Timestamp() {
         timestamp = Instant.now();
     }
 
@@ -15,7 +16,7 @@ public class Timestamps {
 
     @Override
     public String toString() {
-        return "Timestamps{" +
+        return "Timestamp{" +
                 "timestamp=" + timestamp +
                 '}';
     }

@@ -1,18 +1,21 @@
 package MultiMap;
 
-import Types.Timestamps;
+import Types.Timestamp;
 import Types.TransactionID;
+import Types.Value;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
 
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KeyValueStore {
-    Timestamps lastTransactionTimestamp;
+    Timestamp lastTransactionTimestamp;
     Multimap<String, Value> backend;
-    MutableGraph<TransactionID> dependencyGraph;
+    MutableGraph<Timestamp> dependencyGraph;
+    ConcurrentHashMap<Timestamp, TransactionID> index;
 
 
     public KeyValueStore() {
@@ -21,25 +24,28 @@ public class KeyValueStore {
         lastTransactionTimestamp = null;
     }
 
-    public void commitTransaction (Transaction tr) {
-        dependencyGraph.addNode(tr.getId());
-        if (tr.getDependency() != null) {
-            dependencyGraph.putEdge(tr.getDependency(), tr.getId());
+    public void commitTransaction (Transaction transaction) {
+        transaction.setCommit(new Timestamp());
+        index.put(transaction.getCommit(), transaction.getId());
+
+        dependencyGraph.addNode(transaction.getCommit());
+
+        if (transaction.getDependency() != null) {
+            dependencyGraph.putEdge(transaction.getDependency(), transaction.getCommit());
         }
 
-        HashMap<String, Value> operations = tr.getEffectMap();
+        HashMap<String, Value> operations = transaction.getEffectMap();
 
         for (String key : operations.keySet()) {
             backend.put(key, operations.get(key));
         }
-
     }
 
-    public Value getValue (String key, Timestamps dependency) {
+    public Value getValue (String key, Timestamp dependency) {
         boolean stopSearch = false;
-        Timestamps dependencyTimestamp = dependency;
+        Timestamp dependencyTimestamp = dependency;
+        TransactionID trID = index.get(dependency);
 
-        TransactionID trID = transactionID;
         if (backend.containsKey(key)) {
             while ( ! stopSearch ) {
                 for (Value value : backend.get(key)) {
@@ -47,9 +53,11 @@ public class KeyValueStore {
                         return value;
                     }
                 }
-                if (dependencyGraph.predecessors(trID).size() == 1) {
-                    trID = dependencyGraph.predecessors(trID).iterator().next();
-                } else if (dependencyGraph.predecessors(trID).size() == 0) {
+                if (dependencyGraph.predecessors(dependency).size() == 1) {
+                    dependencyTimestamp = dependencyGraph.predecessors(dependency).iterator().next();
+                    trID = index.get(dependencyTimestamp);
+
+                } else if (dependencyGraph.predecessors(dependency).size() == 0) {
                     stopSearch = true;
                 } else {
                     assert false;
@@ -60,7 +68,7 @@ public class KeyValueStore {
         return null;
     }
 
-    public Timestamps getLastTransactionTimestamp() {
+    public Timestamp getLastTransactionTimestamp() {
         return lastTransactionTimestamp;
     }
 

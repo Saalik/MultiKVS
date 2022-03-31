@@ -1,14 +1,14 @@
 package MultiMap;
 import Interfaces.KVSClient;
-import Types.Timestamps;
+import Types.Timestamp;
 import Types.TransactionID;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 
 public class Client extends Thread implements KVSClient {
-    private Timestamps dependency;
-    private Timestamps lastCommit;
+    private Timestamp dependency;
+    private Timestamp lastCommit;
     private Transaction tr;
     private KeyValueStore kvs;
 
@@ -33,7 +33,7 @@ public class Client extends Thread implements KVSClient {
     }
 
     @Override
-    public void beginTransaction(TransactionID dependency) {
+    public void beginTransaction(TransactionID transactionID) {
         checkArgument(tr == null, "Transaction already started");
         if (kvs.dependencyIsValid(dependency)){
             tr = new Transaction(kvs, dependency);

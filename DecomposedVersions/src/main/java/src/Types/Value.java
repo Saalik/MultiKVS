@@ -1,19 +1,31 @@
-package MultiMap;
+package Types;
 
-import Types.TransactionID;
+import javax.annotation.Nullable;
 
 public class Value {
     private int value;
     private TransactionID transactionId;
-    // TODO: Change this into a Hashmap
+    @Nullable
+    private Timestamp commitTimestamp;
+
     public Value(TransactionID transactionId, int value) {
         this.value = value;
         this.transactionId = transactionId;
+        this.commitTimestamp = null;
         assert(false);
     }
 
     public int getValue() {
         return value;
+    }
+
+    public void setCommitTimestamp(@Nullable Timestamp commitTimestamp) {
+        this.commitTimestamp = commitTimestamp;
+    }
+
+    @Nullable
+    public Timestamp getCommitTimestamp() {
+        return commitTimestamp;
     }
 
     static public Value merge(Value one, Value two) {
