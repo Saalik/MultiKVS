@@ -125,11 +125,8 @@ a correct, high performance and geo-distributed database.
 \section{Transactions and timestamps}
 \label{sec:transactions}
 
-<<<<<<< HEAD
-A client of the DDBMS executes transactions.
-=======
-A client of the system executes transactions.
->>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
+
+A client of the backend executes transactions.
 Classically, a transaction is a sequence of reads and updates, bounded by
 a begin and an end.
 The transaction either aborts with no effects; or it commits and all its
@@ -158,12 +155,8 @@ serialisable or snapshot-isolation).
 For space reasons, this paper considers a single model, Transactional
 Causal Plus Consistency (TCC+), i.e., causal consistency with
 transactions and convergence \cite{rep:syn:sh228,rep:pro:sh182}.
-<<<<<<< HEAD
-Under TCC+, a snapshot must be a causally-consistent cut.
-=======
 Under TCC+, timestamps form a partial order (consistent with
 happened-before), and a snapshot must be a causally-consistent cut.
->>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 Other transaction models differ by timestamp ordering being partial or
 total, and by constraints on beginning and committing a transaction.
 
@@ -171,87 +164,17 @@ The formal model represents a transaction with the following information:
 \begin{compactitem}
 \item $\tau$: unique transaction identifier.
 \item $\mathit{Dt}$: dependency timestamp.
-<<<<<<< HEAD
-\item {$\varepsilon$}: effect map, records the updates made by the transaction.
-\item ${R}$: read set, records the objects read by the transaction.
-=======
 \item {$\varepsilon$}: effect map, records the updates made by the
   transaction.
   A write updates the effect map.
 \item ${R}$: read set, records the objects read by the transaction.
   A Read updates the read set.
->>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 \item $\mathit{Ct}$: commit timestamp, assigned if and when the
   transaction commits.
 \item $\mathit{State}$: status, either \emph{not\_started}, \emph{live} or \emph{terminated}.\\
 \end{compactitem}
 
-<<<<<<< HEAD
-A Read updates the read set $R$; a write updates the effect map $\varepsilon$.
 
-
-\subsection{Timestamps and snapshots}
-
-We use timestamps as method of concurrency control.
-Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
-It is used to perform arbitration on the order of the transactions.
-
-Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
-The latter is called the Dependency Snapshot Timestamp.
-
-Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
-In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
-
-\subsection{Object-version}
-
-Having only one version of an object severly limits concurrency in a database.
-Multi-Version Concurrency Control (MVCC) is a technique that allows a database to have multiple versions of an object (Object-Versions).
-Every update to an object creates its own version and to ensure that all transactions read the correct version of an object the system maintains the following information: 
-\begin{itemize}
-  \item \emph{key} is the unique identifier of the object.
-  \item \emph{$\tau_i$} identifier of the transaction that wrote this version.
-  \item \emph{blob} is a pointer to the value of the materialized object.
-\end{itemize}
-
-In this paper we note object-version by $(key ,\tau_i)$.
-
-\section{System Model}
-
-Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
-We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
-
-\begin{figure}[tp]
-  \centering
-  \includegraphics[width=0.75\textwidth]{figures/transitions.png}
-  \caption{Progressions in our model}
-  \label{fig:transitions}
-\end{figure}
-
-\subsection{Transactional Causal Consistency (TCC)}
-
-Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
-TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
-
-To keep track of happened-before, we use timestamp to order updates.
-When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
-These occur atomicallu with regard to any other transactions.
-If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
-
-Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
-
-We introduce our first system invariant:
-=======
-% \subsection{Timestamps and snapshots}
-
-% We use timestamps as method of concurrency control.
-% Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
-% It is used to perform arbitration on the order of the transactions.
-
-% Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
-% The latter is called the Dependency Snapshot Timestamp.
-
-% Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
-% In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
 
 \subsection{Object-versions}
 
@@ -275,53 +198,6 @@ In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
 
-% \section{Approach}
-
-% Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
-
-% We have two choices to start from:
-% \begin{itemize}
-%   \item An in-memory key-value store that stores operations in a sequential Journal.
-%   \item An in memory key-value store that create and store states.
-% \end{itemize}
-
-% To start we do not impose any constraints on the size of the memory footprint.
-% This allow use to focus only on transaction handling and the invariants that are associated with them.
-% From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
-% The different transitions are represented in figure 1 \ref{fig:transitions}.
-
-% \section{System Model}
-
-% Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
-% We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
-
-% \begin{figure}[tp]
-%   \centering
-%   \includegraphics[width=0.75\textwidth]{figures/transitions.png}
-%   \caption{Needs to be changed}
-%   \label{fig:transitions}
-% \end{figure}
-
-% \subsection{Transactional Causal Consistency (TCC)}
-
-% Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
-% TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
-
-% To keep track of happened-before, we use timestamp to order updates.
-% When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
-% These occur atomicallu with regard to any other transactions.
-% If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
-
-% Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
-
-% We introduce our first system invariant:
-
-% \[
-%   \begin{array}{lcl}
-%     \emph{$Dt_i < Ct_i$}
-%   \end{array} 
-% \]
-
 \section{Intuitive model}
 
 We start with an intuitive simple in-memory key-value store.
@@ -332,7 +208,6 @@ A client starts a transaction and execute a sequence of operations and tries to 
 This means all operations executed by the client must be part of a \emph{live} transaction.
 This also include the commit and abort call.
 Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
->>>>>>> cb2e9fe069828b6f8c6d9cd94ff9c7d11a1d52a0
 
 These are the transaction invariants maintained during transactions:
 \[
@@ -478,3 +353,63 @@ Finally we plan on designing test that specifically targets breaking invariants 
 
 
 \end{document}
+
+
+% \section{Approach}
+
+% Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
+
+% We have two choices to start from:
+% \begin{itemize}
+%   \item An in-memory key-value store that stores operations in a sequential Journal.
+%   \item An in memory key-value store that create and store states.
+% \end{itemize}
+
+% To start we do not impose any constraints on the size of the memory footprint.
+% This allow use to focus only on transaction handling and the invariants that are associated with them.
+% From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
+% The different transitions are represented in figure 1 \ref{fig:transitions}.
+
+% \section{System Model}
+
+% Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
+% We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
+
+% \begin{figure}[tp]
+%   \centering
+%   \includegraphics[width=0.75\textwidth]{figures/transitions.png}
+%   \caption{Needs to be changed}
+%   \label{fig:transitions}
+% \end{figure}
+
+% \subsection{Transactional Causal Consistency (TCC)}
+
+% Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
+% TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
+
+% To keep track of happened-before, we use timestamp to order updates.
+% When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
+% These occur atomicallu with regard to any other transactions.
+% If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
+
+% Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
+
+% We introduce our first system invariant:
+
+% \[
+%   \begin{array}{lcl}
+%     \emph{$Dt_i < Ct_i$}
+%   \end{array} 
+% \]
+
+% \subsection{Timestamps and snapshots}
+
+% We use timestamps as method of concurrency control.
+% Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
+% It is used to perform arbitration on the order of the transactions.
+
+% Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
+% The latter is called the Dependency Snapshot Timestamp.
+
+% Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
+% In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
