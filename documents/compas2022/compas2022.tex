@@ -25,7 +25,7 @@
 \begin{document}
 \selectlanguage{english}
 
-\title{Towards correct high-performance database systems}
+\title{Towards correct high-performance database backends}
 \shorttitle{Correct High-Performance DBMSs}
 
 \author{Saalik Hatia(1), Annette Bieniusa(2), Carla Ferreira(3), Gustavo Petri(4), Marc Shapiro(1)}
@@ -47,9 +47,9 @@
 %===========================================================  
 \begin{abstract}
   Our goal is to design and implement a full-featured, high-performance
-  geo-distributed database that is correct by construction.
+  geo-distributed database backend that is correct by construction.
   We adopt a stepwise approach.
-  We start from a simplistic concurrent database system; we formalise an
+  We start from a simplistic concurrent database backend; we formalise an
   operational semantics and its key invariants; we also provide a
   reference implementation and test cases exercising the invariants.
   From there, we plan to prove that the semantic model satisfies the
@@ -118,9 +118,9 @@ Furthermore, we compare performance without and with the feature.
 
 Our ultimate aim is to show that the final design, including all the
 features, is both correct (by simulation of the baseline) and has
-comparable performance to ad-hoc database systems with similar features.
+comparable performance to ad-hoc database backends with similar features.
 We claim that providing developers with a clear model helps to implement
-a correct, high performance and geo-distributed database.
+a correct, high performance and geo-distributed database backend.
 
 \section{Transactions and timestamps}
 \label{sec:transactions}
