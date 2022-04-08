@@ -7,6 +7,9 @@
 % 'tempsreel' doit être utilisée avec le style compas2021
 \documentclass[systeme,french,english]{compas2022}
 \usepackage[utf8]{inputenc}
+\usepackage{comment}
+\usepackage{tikz}
+\usepackage{todonotes}
 
 \usepackage{algorithm2e}
 \usepackage[T1]{fontenc} %% Vector fonts
@@ -14,6 +17,26 @@
 \usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
 \usepackage{xspace}  %% Macros with automatic spacing
 \usepackage[defblank]{paralist}  %% inline lists
+
+\makeatletter 
+\tikzstyle{inlinenotestyle} = [
+    draw=\@todonotes@currentbordercolor,
+    fill=\@todonotes@currentbackgroundcolor,
+    line width=0.5pt,
+    inner sep = 0.8 ex,
+    rounded corners=4pt]
+
+\renewcommand{\@todonotes@drawInlineNote}{%
+        {\begin{tikzpicture}[remember picture,baseline=(current bounding box.base)]%
+            \draw node[inlinenotestyle,font=\@todonotes@sizecommand, anchor=base,baseline]{%
+              \if@todonotes@authorgiven%
+                {\noindent \@todonotes@sizecommand \@todonotes@author:\,\@todonotes@text}%
+              \else%
+                {\noindent \@todonotes@sizecommand \@todonotes@text}%
+              \fi};%
+           \end{tikzpicture}}}%
+\newcommand{\mytodo}[1]{\@todo[inline]{#1}}%
+\makeatother
 
 
 %===========================================================
@@ -104,7 +127,6 @@ Our starting baseline is a bare-bones and ``obviously correct'' backend,
 restricted to its simplest function, i.e., transactions reading and
 writing data.
 We formalise its operational semantics and specify its invariants.
-We prove (in Coq) that the semantics satisfies the invariants.
 We also provide a (hand-written) reference implementation, and use test
 cases derived from the formal model to check that it follows the
 semantics and does not violate the invariants.
@@ -122,7 +144,11 @@ comparable performance to ad-hoc database backends with similar features.
 We claim that providing developers with a clear model helps to implement
 a correct, high performance and geo-distributed database backend.
 
-\section{Transactions and timestamps}
+\section{Background}
+
+Avant de parler d'implémentation je reparle rapidement du background.
+
+\subsection{Transactions and timestamps}
 \label{sec:transactions}
 
 
@@ -198,10 +224,21 @@ In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
 
-\section{Intuitive model}
+
+\section{Unbounded Versions}
 
 We start with an intuitive simple in-memory key-value store.
 Therefore if a crash or restart occurs the database is lost.
+It is also based on the assumption that the we have infinite memory, therefore we keep all Object-versions of every committed transaction in the backend.
+Finally we maintain a dependency graph between transaction to determine visibility of transactions.
+
+
+\subsection{Specification}
+
+\mytodo{Here I will put labels for every new invariants and then used them in the next section to show the implementation.
+Some are duplicate but it's to ensure that I have everything I will trim it down later.
+Also the lookup part is missing but I will add it later.}
+
 In this section we present the semantics from the viewpoint of the system.
 The general behavior describe in this section is as follows.
 A client starts a transaction and execute a sequence of operations and tries to commit or abort the transaction.
@@ -209,15 +246,13 @@ This means all operations executed by the client must be part of a \emph{live} t
 This also include the commit and abort call.
 Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
 
-These are the transaction invariants maintained during transactions:
+These are the transaction invariants maintained in the system:
 \[
   \begin{array}{lcl}
     \emph{$Ct \neq null => Dt_i > Ct_i$}\\
     \emph{$(read, effect, commit, abort) => State = live$}
   \end{array} 
 \]
-
-
 
 \textbf{Start transaction} (Session part missing)
 When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
@@ -288,84 +323,33 @@ $Dt_i \geq Ct_i$.\\
 
 Preconditions:\\ 
 $State_i = \emph{live}$ \\
-$Ct = null$
+$Ct = null$ 
 
 Postconditions:\\
 $State = terminated$\\
 $Ct = null$
 
-\subsection{Bounded Memory}
 
-Unbounded memory is not realistic in a real system.
-In the Bounded Memory model we choose to define an arbitrary limitation on the size of the memory used by the system.
-
-\textbf{System invariants}
-All system invariants from the Unbounded memory are present here.
-Plus we introduce a two new value:
-\begin{itemize}
-  \item \emph{$M_{used}$} contains the current size of data in memory
-  \item \emph{$M_{limit}$} represents the maximum size available to the database
-\end{itemize}
-Based on these two variable we introduce a new system invariant:
-\begin{itemize}
-  \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
-\end{itemize}
-In order to uphold the memory constraints of the system we keep track of all the dependencies of running transactions called \emph{RunningTr} but also all the commit timestamps of finished transactions \emph{CommitTr}.
-
-We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
-\emph{MinDt} represents the oldest snapshot any running transaction is reading from.
-When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningTr}. 
-And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
-
-\subsection{Implementation details}
-
-Our different backend version are impelmented in Java.
-All of our versions implement the same interface that we enhanced if needed by the specification.
-
-We created abstract type to handles all our operations:
-\begin{itemize}
-  \item TransactionID
-  \item Value
-  \item Timestamp
-\end{itemize}
-
-TransactionID is a unique identifier for a transaction.
-Value encapsualtes the value of an Object-version and is used to compare and merge different Object-versions.
-Timestamp is an implementation of time tracking within the system.
-
-Our keyvalue store is implemented in a Multimap of Key to Values and contains for every key all the Object-version that have been committed.
-
-When a transaction is running we create a transaction object with the dependency timestamp, a unique transaction identifier and an empty state of transaction.
-
-\subsection{Garbage collectio - WIP}
-When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
-All the transaction in the system are halted in order to perform a garbage collection.
-
-Ici je dois expliquer comment est fait le GC:\\
-\begin{algorithm}
-  \KwIn{\\ \Indp
-    RunningTr : set
-  }
-  \(oldTr \longleftarrow \emptyset\)\;
-  \ForAll{\(\tau_{i} \in Running\)}{
-    \If{\(Dt_{i} < MinDt\)}{
-      \(oldTr \longleftarrow \tau_i\)\;
-    }
-  }
-\end{algorithm}
-
-WIP
+\subsection{Implementation}
 
 
-\subsection{Implementation - WIP}
 
-Every model is implemented in java with external libraries for persistency, CRDTs and data structures that we consider being correct.
-Implementation and evaluation of the different models have two purposes.
-First we implement our different models as closely as possible to our specification and show that they are correct by running the same test on all versions.
+\section{Bounded Versions}
 
-Finally we plan on designing test that specifically targets breaking invariants defined in our model making sure the system crashes if they are violated, and run a set of traces that are generated from a Coq implementation.
+Now we consider a bounded version of the key-value store.
+To achieve this, we choose to define an arbitrary limitation on the number of versions used by the system.\\
+\mytodo{Talk about tracking the memory usage of the system in the system. The policies in case we reach the threshold. And the need for garbage collection now.
+I will add which calls it affects and the new added invariants}
 
+\subsection{Specification}
 
+\subsection{Implementation}
+
+\section{Comparison and testing}
+
+In this section we present the tests that we use to show that the unbounded version simulate the unbounded version.
+We also talk about the difference between the two versions.
+The evolution of the number of versions, test the new invariants and the performance impact on the system.
 
 \section{Conclusion}
 
@@ -373,63 +357,3 @@ Finally we plan on designing test that specifically targets breaking invariants 
 
 
 \end{document}
-
-
-% \section{Approach}
-
-% Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
-
-% We have two choices to start from:
-% \begin{itemize}
-%   \item An in-memory key-value store that stores operations in a sequential Journal.
-%   \item An in memory key-value store that create and store states.
-% \end{itemize}
-
-% To start we do not impose any constraints on the size of the memory footprint.
-% This allow use to focus only on transaction handling and the invariants that are associated with them.
-% From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
-% The different transitions are represented in figure 1 \ref{fig:transitions}.
-
-% \section{System Model}
-
-% Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
-% We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
-
-% \begin{figure}[tp]
-%   \centering
-%   \includegraphics[width=0.75\textwidth]{figures/transitions.png}
-%   \caption{Needs to be changed}
-%   \label{fig:transitions}
-% \end{figure}
-
-% \subsection{Transactional Causal Consistency (TCC)}
-
-% Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
-% TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
-
-% To keep track of happened-before, we use timestamp to order updates.
-% When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
-% These occur atomicallu with regard to any other transactions.
-% If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
-
-% Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
-
-% We introduce our first system invariant:
-
-% \[
-%   \begin{array}{lcl}
-%     \emph{$Dt_i < Ct_i$}
-%   \end{array} 
-% \]
-
-% \subsection{Timestamps and snapshots}
-
-% We use timestamps as method of concurrency control.
-% Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
-% It is used to perform arbitration on the order of the transactions.
-
-% Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
-% The latter is called the Dependency Snapshot Timestamp.
-
-% Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
-% In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
