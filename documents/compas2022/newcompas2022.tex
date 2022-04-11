@@ -146,7 +146,6 @@ a correct, high performance and geo-distributed database backend.
 
 \section{Background}
 
-Avant de parler d'implémentation je reparle rapidement du background.
 
 \subsection{Transactions and timestamps}
 \label{sec:transactions}
@@ -331,6 +330,24 @@ $Ct = null$
 
 
 \subsection{Implementation}
+
+The Unbounded Version was implemented in Java using a MultiMap as backend.
+The MultiMap is a map of Key to a set of Object-Versions.
+In order to maintain our consistency criteria we maintain seperatly a Graph of dependency between transactions.
+
+We created a Transaction class that is used by both the client and the backend to handle transactions.
+Every Transaction object is initalized with a unique identifier transactionID and a second transactionID named dependency.
+The latter represent the transactionID of the transaction it depends on.
+When a client create a Transaction an EffectMap and a ReadSet are initalized to keep track of the operations made by the client.
+
+\subsubsection{Client behavior}
+
+A client cannot execute operations outside a transaction. 
+Before doing any operation a client explicitly starts a transaction.
+To enforce this, both the effect and get API checks if they are executed inside a live transaction.
+
+In order to start a transaction a client calls the \emph{StartTransaction} function.
+When doing so 
 
 
 

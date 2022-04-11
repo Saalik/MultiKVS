@@ -198,7 +198,7 @@ In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
 
-\section{Intuitive model}
+\section{Unbounded Version}
 
 We start with an intuitive simple in-memory key-value store.
 Therefore if a crash or restart occurs the database is lost.
@@ -294,6 +294,26 @@ Postconditions:\\
 $State = terminated$\\
 $Ct = null$
 
+\subsection{Implementation}
+
+The Unbounded Version was implemented in Java using a MultiMap as backend.
+The MultiMap is a map of Key to a set of Object-Versions.
+In order to maintain our consistency criteria we maintain seperatly a Graph of dependency between transactions.
+
+We created a Transaction class that is used by both the client and the backend to handle transactions.
+Every Transaction object is initalized with a unique identifier transactionID and a second transactionID named dependency.
+The latter represent the transactionID of the transaction it depends on.
+When a client create a Transaction an EffectMap and a ReadSet are initalized to keep track of the operations made by the client.
+
+\subsubsection{Client behavior}
+
+A client cannot execute operations outside a transaction. 
+Before doing any operation a client explicitly starts a transaction.
+To enforce this, both the effect and get API checks if they are executed inside a live transaction.
+
+In order to start a transaction a client calls the \emph{StartTransaction} function.
+When doing so 
+
 \subsection{Bounded Memory}
 
 Unbounded memory is not realistic in a real system.
@@ -373,63 +393,3 @@ Finally we plan on designing test that specifically targets breaking invariants 
 
 
 \end{document}
-
-
-% \section{Approach}
-
-% Our ultimate goal is to arrive at a database that has a Journal for fast writes, a Checkpoint Store that enable truncation of the journal and speed up reads and recovery and is distributed for geo-replication.
-
-% We have two choices to start from:
-% \begin{itemize}
-%   \item An in-memory key-value store that stores operations in a sequential Journal.
-%   \item An in memory key-value store that create and store states.
-% \end{itemize}
-
-% To start we do not impose any constraints on the size of the memory footprint.
-% This allow use to focus only on transaction handling and the invariants that are associated with them.
-% From there we can add either fault tolerance by adding a persistency layer or restrict the amount of memory used by the database.
-% The different transitions are represented in figure 1 \ref{fig:transitions}.
-
-% \section{System Model}
-
-% Starting from a simple in memory Key-Value store, we describe the model then progressively add features and compare every progression between them (\emph{figure \ref{fig:transitions}}).
-% We provide an implementation for every model and compare implementations between them to show that the implementation are equivalent.
-
-% \begin{figure}[tp]
-%   \centering
-%   \includegraphics[width=0.75\textwidth]{figures/transitions.png}
-%   \caption{Needs to be changed}
-%   \label{fig:transitions}
-% \end{figure}
-
-% \subsection{Transactional Causal Consistency (TCC)}
-
-% Our model supports multiple consistency levels. In this work however, we focus on Transactional Causal Consistency (TCC).
-% TCC means that: (1) if one update happens before another, they will be observed in the same order (causal consistency), and (2) updates in the same transaction are observed all-or-nothing.
-
-% To keep track of happened-before, we use timestamp to order updates.
-% When a transaction $\tau_i$ commits, it is assigned a commit timestamp $Ct_i$ timestamp and the effects $\varepsilon_i$ moved into the store with as object versions $(key,Ct_i)$.
-% These occur atomicallu with regard to any other transactions.
-% If a transaction $\tau_j$ has a dependency $Dt_j$ higher than $Ct_i$ than all the effects of $\tau_i$ are visible for $\tau_j$.
-
-% Reformuler en expliquant pourquoi les CRDT ici(Conflits are taken care of by using CRDTs as our data type ensuring that reading from a snapshot $St$ is determistic.)
-
-% We introduce our first system invariant:
-
-% \[
-%   \begin{array}{lcl}
-%     \emph{$Dt_i < Ct_i$}
-%   \end{array} 
-% \]
-
-% \subsection{Timestamps and snapshots}
-
-% We use timestamps as method of concurrency control.
-% Every transaction has a timestamp (Ct) that is assigned by the system when the transaction is committed.
-% It is used to perform arbitration on the order of the transactions.
-
-% Using these timestamps we define a snapshot as a collection of transaction that have a commit timestamp less than or equal to a timestamp.
-% The latter is called the Dependency Snapshot Timestamp.
-
-% Snapshots provide \emph{isolation} guarantees to the system, meaning a client only reads object versions that are part of the snapshot and are committed. 
-% In addition to isolation, snapshots also provide the client with \emph{atomicity} guarantees: $\varepsilon_i$ of a transaction $\tau_i$ are seen in an all-or-nothing manner.
