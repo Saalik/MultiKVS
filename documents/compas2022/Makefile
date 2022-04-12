@@ -10,7 +10,7 @@
 
 # Please do not add .pdf or other generated files to SVN targets.  Thanks!
 
-FILE=compas2022
+FILE=newcompas2022
 
 MAKEFLAGS=	--no-print-directory
 
