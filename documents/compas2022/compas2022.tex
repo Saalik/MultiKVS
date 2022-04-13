@@ -199,7 +199,7 @@ In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
 
-\section{Unbounded Versions}
+\section{Unbounded Version Store}
 
 We start with an intuitive simple in-memory key-value store.
 Therefore if a crash or restart occurs the database is lost.
@@ -233,20 +233,20 @@ The transaction is then assigned a unique transaction identifier $\tau$ and $\em
     API & Preconditions & Invariants & Postconditions\\
     & & & \\
     \hline
-    startTransaction & $State \neq live$ & \emph{$Ct \neq null => Dt > Ct$} & $State = \emph{live}$\\
-    & & $Ct = null$ & \\
+    startTransaction & $\mathit{State \neq live}$ & $\mathit{Ct \neq null => Dt > Ct}$ & $\mathit{State = live}$\\
+    & & $\mathit{Ct = null}$ & \\
     \hline
-    read & $State = \emph{live}$ & $R' = R \cup \{key\}$ &\\
-    & & $Ct = null$ & \\
+    read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$ &\\
+    & & $\mathit{Ct = null}$ & \\
     \hline
-    effect & & $State = \emph{live}$ & $\varepsilon = \varepsilon \cup \{(key, \tau)\}$ \\
-    & & $Ct = null$ & \\
+    effect & & $\mathit{State = live}$ & $\mathit{\varepsilon = \varepsilon \cup \{(key, \tau)\}}$ \\
+    & & $\mathit{Ct = null}$ & \\
     \hline
-    commit & $State = \emph{live}$ &  & $Store' = Store \cup \varepsilon$\\
-    & $Ct = null$ & & $State = terminated$ \\
-    & & & $Dt \geq Ct$ \\
+    commit & $\mathit{State = live}$ &  & $\mathit{Store' = Store \cup \varepsilon}$\\
+    & $\mathit{Ct = null}$ & & $\mathit{State = terminated}$ \\
+    & & & $\mathit{Dt \geq Ct}$ \\
     \hline
-    abort & $State = \emph{live}$ & $Ct = null$ & $State = terminated$\\
+    abort & $\mathit{State = live}$ & $\mathit{Ct = null}$ & $\mathit{State = terminated}$\\
     & & & \\
     \hline
 
@@ -270,7 +270,7 @@ Finally the transaction's $State$ is set to $terminated$ making the effects visi
 
 \textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
 
-\subsection{Bounded Memory}
+\subsection{Bounded Memory Version Store }
 
 Once we have the Unbounded Version impelmented we add an arbitrary limitation on the size of the memory used by the system.
 
@@ -300,25 +300,25 @@ And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system
     API & Preconditions & Invariants & Postconditions\\
     & & & \\
     \hline
-    startTransaction & $State \neq live$ & \emph{$Ct \neq null => Dt > Ct$} & $State = \emph{live}$\\
-    & & $Ct = null$ & \\
+    startTransaction & $\mathit{State \neq live}$ & $\mathit{Ct \neq null => Dt > Ct}$ & $\mathit{State = live}$\\
+    & & $\mathit{Ct = null}$ & \\
     \hline
-    read & $State = \emph{live}$ & $R' = R \cup \{key\}$ &\\
-    & & $Ct = null$ & \\
+    read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$ &\\
+    & & $\mathit{Ct = null}$ & \\
     \hline
-    effect & & $State = \emph{live}$ & $\varepsilon = \varepsilon \cup \{(key, \tau)\}$ \\
-    & & $Ct = null$ & \\
+    effect & & $\mathit{State = live}$ & $\mathit{\varepsilon = \varepsilon \cup \{(key, \tau)\}}$ \\
+    & & $\mathit{Ct = null}$ & \\
     \hline
-    \rowcolor{lightgray} commit & $State = \emph{live}$ & $M_{used}$ $<$ $M_{limit}$ & $Store' = Store \cup \varepsilon$\\
-    \rowcolor{lightgray} & $Ct = null$ & & $State = terminated$ \\
-    \rowcolor{lightgray} & & & $Dt \geq Ct$ \\
+    \rowcolor{lightgray} commit & $\mathit{State = live}$ & $\mathit{M_{used} < M_{limit}}$ & $\mathit{Store' = Store \cup \varepsilon}$\\
+    \rowcolor{lightgray} & $\mathit{Ct = null}$ & & $\mathit{State = terminated}$ \\
+    \rowcolor{lightgray} & & & $\mathit{Dt \geq Ct}$ \\
     \hline
-    abort & $State = \emph{live}$ & $Ct = null$ & $State = terminated$\\
+    abort & $\mathit{State = live}$ & $\mathit{Ct = null}$ & $\mathit{State = terminated}$\\
     & & & \\
     \hline
 
   \end{tabular}
-  \caption{Bounded Memory: Asserts and invariants for each API call}
+  \caption{Bounded Memory Version Store: Asserts and invariants for each API call}
   \label{tab:AssertInvariantsBounded}
 \end{table}
 
