@@ -7,8 +7,9 @@
 % 'tempsreel' doit être utilisée avec le style compas2021
 \documentclass[systeme,french,english]{compas2022}
 \usepackage[utf8]{inputenc}
-
+\usepackage{float}
 \usepackage{algorithm2e}
+\usepackage[table,x11names]{xcolor}
 \usepackage[T1]{fontenc} %% Vector fonts
 \usepackage[numbers,square,sort&compress]{natbib} %% Better bibliography
 \usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
@@ -198,135 +199,89 @@ In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
 
-\section{Unbounded Version}
+\section{Unbounded Versions}
 
 We start with an intuitive simple in-memory key-value store.
 Therefore if a crash or restart occurs the database is lost.
-In this section we present the semantics from the viewpoint of the system.
-The general behavior describe in this section is as follows.
-A client starts a transaction and execute a sequence of operations and tries to commit or abort the transaction.
-This means all operations executed by the client must be part of a \emph{live} transaction.
-This also include the commit and abort call.
-Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
-
-These are the transaction invariants maintained during transactions:
-\[
-  \begin{array}{lcl}
-    \emph{$Ct \neq null => Dt_i > Ct_i$}\\
-    \emph{$(read, effect, commit, abort) => State = live$}
-  \end{array} 
-\]
-
-
-
-\textbf{Start transaction} (Session part missing)
-When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
-If no dependency timestamp is specified than system assign a valid snapshot to the transaction.
-(On parle de l'implémentation de ce mécanisme plus tard)
-The transaction is then assigned a unique transaction identifier $\tau_i$ and $\emph{State} \leftarrow \emph{live}$.
-Here are the preconditions, invariants and postconditions:
-(Alt) From these requirement we extract the following preconditions:
-
-Preconditions:\\
-$State \neq live$
-$Ct = null$
-
-Invariants:\\
-\emph{$Ct \neq null => Dt_i > Ct_i$}\\
-$Ct = null$
-
-Postconditions:\\
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-
-\textbf{Read} returns the correct Object-version in the store that is valid in regads to our consistency model.
-If two conccurent Object-versions exist, meaning they are part of two transaction that have a commit timestamp lower or equal than the dependency timestamp and are not related by precedence.
-(NOTE: première fois que j'en parle)
-We use a deterministic algorithm, ie. merge or LWW, to choose the Object-version returned.
-In case there are no existing Object-version in memory we return a default value.
-Finally the system adds the key to the read set $R_i$ of the transaction. 
-
-Preconditions:\\ 
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-Invariants:\\
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-Postconditions:\\
-$R_i = R \cup \{key\}$ \\
-
-\textbf{Effect} the system creates a new Object-version by merging the Object-version that is returned by \emph{read(key)} with the effect.
-
-Preconditions:\\ 
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-Invariants:\\
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-Postconditions:\\
-$\varepsilon_i = \varepsilon_i \cup \{(key, \tau_i)\}$ \\
-
-\textbf{Commit} the system checks if the effects $\varepsilon_i$ are valid in regards to the consistency model and abort if not. (Need more precision. Maybe earlier here does not seem to be the correct section)
-If the effects are valid the Objects versions are added to the Store and assigns a commit timestamp $Ct_i$.
-Finally the transaction's $State$ is set to $terminated$ making the effects visible in the store atomically.
-
-Preconditions:\\ 
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-Postconditions:\\
-$Store = Store \cup \varepsilon_i$\\
-$State = terminated$\\
-$Dt_i \geq Ct_i$.\\
-
-\textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
-
-Preconditions:\\ 
-$State_i = \emph{live}$ \\
-$Ct = null$
-
-Postconditions:\\
-$State = terminated$\\
-$Ct = null$
-
-\subsection{Implementation}
-
-The Unbounded Version was implemented in Java using a MultiMap as backend.
-The MultiMap is a map of Key to a set of Object-Versions.
+The implementation is in Java using a MultiMap<Key, Value> as backend.
 In order to maintain our consistency criteria we maintain seperatly a Graph of dependency between transactions.
 
 We created a Transaction class that is used by both the client and the backend to handle transactions.
 Every Transaction object is initalized with a unique identifier transactionID and a second transactionID named dependency.
 The latter represent the transactionID of the transaction it depends on.
 When a client create a Transaction an EffectMap and a ReadSet are initalized to keep track of the operations made by the client.
+The general behavior is as follows.
+A client starts a transaction and execute a sequence of operations and tries to commit or abort the transaction.
+This means all operations executed by the client must be part of a \emph{live} transaction.
+This also include the commit and abort call.
+Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
 
-\subsubsection{Client behavior}
+In this section we present the general logic of each call followed by the invariants checks.
 
-A client cannot execute operations outside a transaction. 
-Before doing any operation a client explicitly starts a transaction.
-To enforce this, both the effect and get API checks if they are executed inside a live transaction.
 
-In order to start a transaction a client calls the \emph{StartTransaction} function.
-When doing so 
+\textbf{StartTransaction} When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
+The validity is handled by a seperate APi call that implements the consistency logic seperatly.
+If no dependency timestamp is specified than system assigns a valid snapshot to the transaction.
+The transaction is then assigned a unique transaction identifier $\tau$ and $\emph{State} \leftarrow \emph{live}$.
+
+
+\begin{table}
+  \centering
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+    & & & \\
+    API & Preconditions & Invariants & Postconditions\\
+    & & & \\
+    \hline
+    startTransaction & $State \neq live$ & \emph{$Ct \neq null => Dt > Ct$} & $State = \emph{live}$\\
+    & & $Ct = null$ & \\
+    \hline
+    read & $State = \emph{live}$ & $R' = R \cup \{key\}$ &\\
+    & & $Ct = null$ & \\
+    \hline
+    effect & & $State = \emph{live}$ & $\varepsilon = \varepsilon \cup \{(key, \tau)\}$ \\
+    & & $Ct = null$ & \\
+    \hline
+    commit & $State = \emph{live}$ &  & $Store' = Store \cup \varepsilon$\\
+    & $Ct = null$ & & $State = terminated$ \\
+    & & & $Dt \geq Ct$ \\
+    \hline
+    abort & $State = \emph{live}$ & $Ct = null$ & $State = terminated$\\
+    & & & \\
+    \hline
+
+  \end{tabular}
+  \caption{Asserts and invariants for each API call}
+  \label{tab:AssertInvariantsUnbounded}
+\end{table}
+
+\textbf{Read} returns the correct Object-version in the store that is valid in regads to our consistency model.
+If two conccurent Object-versions exist, meaning they are part of two transaction that have a commit timestamp lower or equal than the dependency timestamp and are not related by precedence.
+We use a deterministic algorithm, ie. merge or LWW, to choose the Object-version returned.
+In case there are no existing Object-version in memory we return a default value.
+Finally the system adds the key in the ReadSet $R$ of the transaction. 
+
+
+\textbf{Effect} the system creates a new Object-version by merging the previous version that is returned by \emph{read(key)} with the effect.
+
+\textbf{Commit} the system checks if the effects $\varepsilon_i$ are valid in regards to the consistency model and abort if not. (Need more precision. Maybe earlier here does not seem to be the correct section)
+If the effects are valid the Objects versions are added to the Store and assigns a commit timestamp $Ct_i$.
+Finally the transaction's $State$ is set to $terminated$ making the effects visible in the store atomically.
+
+\textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
 
 \subsection{Bounded Memory}
 
-Unbounded memory is not realistic in a real system.
-In the Bounded Memory model we choose to define an arbitrary limitation on the size of the memory used by the system.
+Once we have the Unbounded Version impelmented we add an arbitrary limitation on the size of the memory used by the system.
 
 \textbf{System invariants}
-All system invariants from the Unbounded memory are present here.
-Plus we introduce a two new value:
+All invariants from the Unbounded memory are valid in this system.
+In order to keep track of memory utilization in the system we introduce introduce a two new values:
 \begin{itemize}
   \item \emph{$M_{used}$} contains the current size of data in memory
   \item \emph{$M_{limit}$} represents the maximum size available to the database
 \end{itemize}
-Based on these two variable we introduce a new system invariant:
+Based on these two variables we introduce a new system invariant:
 \begin{itemize}
   \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
 \end{itemize}
@@ -337,53 +292,74 @@ We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
 When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningTr}. 
 And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
 
-\subsection{Implementation details}
+\begin{table}
+  \centering
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+    & & & \\
+    API & Preconditions & Invariants & Postconditions\\
+    & & & \\
+    \hline
+    startTransaction & $State \neq live$ & \emph{$Ct \neq null => Dt > Ct$} & $State = \emph{live}$\\
+    & & $Ct = null$ & \\
+    \hline
+    read & $State = \emph{live}$ & $R' = R \cup \{key\}$ &\\
+    & & $Ct = null$ & \\
+    \hline
+    effect & & $State = \emph{live}$ & $\varepsilon = \varepsilon \cup \{(key, \tau)\}$ \\
+    & & $Ct = null$ & \\
+    \hline
+    \rowcolor{lightgray} commit & $State = \emph{live}$ & $M_{used}$ $<$ $M_{limit}$ & $Store' = Store \cup \varepsilon$\\
+    \rowcolor{lightgray} & $Ct = null$ & & $State = terminated$ \\
+    \rowcolor{lightgray} & & & $Dt \geq Ct$ \\
+    \hline
+    abort & $State = \emph{live}$ & $Ct = null$ & $State = terminated$\\
+    & & & \\
+    \hline
 
-Our different backend version are impelmented in Java.
-All of our versions implement the same interface that we enhanced if needed by the specification.
+  \end{tabular}
+  \caption{Bounded Memory: Asserts and invariants for each API call}
+  \label{tab:AssertInvariantsBounded}
+\end{table}
 
-We created abstract type to handles all our operations:
-\begin{itemize}
-  \item TransactionID
-  \item Value
-  \item Timestamp
-\end{itemize}
+\subsubsection{Garbage collection}
 
-TransactionID is a unique identifier for a transaction.
-Value encapsualtes the value of an Object-version and is used to compare and merge different Object-versions.
-Timestamp is an implementation of time tracking within the system.
+If a client attempts to commit and the memory used invariant is violated then the system performs a garbage collection by iterating through all the Object-versions.
+Every Object-version that has a commit timestamp that is lower than MinDt is removed from the backend.
 
-Our keyvalue store is implemented in a Multimap of Key to Values and contains for every key all the Object-version that have been committed.
+If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
 
-When a transaction is running we create a transaction object with the dependency timestamp, a unique transaction identifier and an empty state of transaction.
-
-\subsection{Garbage collectio - WIP}
-When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
-All the transaction in the system are halted in order to perform a garbage collection.
-
-Ici je dois expliquer comment est fait le GC:\\
-\begin{algorithm}
-  \KwIn{\\ \Indp
-    RunningTr : set
-  }
-  \(oldTr \longleftarrow \emptyset\)\;
-  \ForAll{\(\tau_{i} \in Running\)}{
-    \If{\(Dt_{i} < MinDt\)}{
-      \(oldTr \longleftarrow \tau_i\)\;
-    }
-  }
-\end{algorithm}
+\section{Testing}
 
 WIP
 
+% \subsection{Garbage collectio - WIP}
+% When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
+% All the transaction in the system are halted in order to perform a garbage collection.
 
-\subsection{Implementation - WIP}
+% Ici je dois expliquer comment est fait le GC:\\
+% \begin{algorithm}
+%   \KwIn{\\ \Indp
+%     RunningTr : set
+%   }
+%   \(oldTr \longleftarrow \emptyset\)\;
+%   \ForAll{\(\tau_{i} \in Running\)}{
+%     \If{\(Dt_{i} < MinDt\)}{
+%       \(oldTr \longleftarrow \tau_i\)\;
+%     }
+%   }
+% \end{algorithm}
 
-Every model is implemented in java with external libraries for persistency, CRDTs and data structures that we consider being correct.
-Implementation and evaluation of the different models have two purposes.
-First we implement our different models as closely as possible to our specification and show that they are correct by running the same test on all versions.
+% WIP
 
-Finally we plan on designing test that specifically targets breaking invariants defined in our model making sure the system crashes if they are violated, and run a set of traces that are generated from a Coq implementation.
+
+% \subsection{Implementation - WIP}
+
+% Every model is implemented in java with external libraries for persistency, CRDTs and data structures that we consider being correct.
+% Implementation and evaluation of the different models have two purposes.
+% First we implement our different models as closely as possible to our specification and show that they are correct by running the same test on all versions.
+
+% Finally we plan on designing test that specifically targets breaking invariants defined in our model making sure the system crashes if they are violated, and run a set of traces that are generated from a Coq implementation.
 
 
 
