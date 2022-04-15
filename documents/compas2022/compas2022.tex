@@ -26,14 +26,14 @@
 \begin{document}
 \selectlanguage{english}
 
-\title{Towards correct high-performance database backends}
-\shorttitle{Correct High-Performance backends}
+\title{Towards a correct, high-performance database backend}
+\shorttitle{Correct High-Performance backend}
 
 \author{Saalik Hatia(1), Annette Bieniusa(2), Carla Ferreira(3), Gustavo Petri(4), Marc Shapiro(1)}
 
 
 \address{
-  (1)~LIP6--Sorbonne-Université, Paris, France  \\
+  (1)~LIP6--Sorbonne-Université \& Inria, Paris, France  \\
   (2)~TU Kaiserslautern, Germany \\
   (3)~Universidade NOVA de Lisboa, Portugal \\
   (4)~ARM, Cambridge, United Kingdom\\
@@ -47,23 +47,28 @@
 %R\'esum\'e
 %===========================================================  
 \begin{abstract}
-  Our goal is to design and implement a full-featured, high-performance
-  geo-distributed database backend that is correct by construction.
-  We adopt a stepwise approach.
-  We start from a simplistic concurrent database backend; we formalise an
-  operational semantics and its key invariants; we also provide a
-  reference implementation and test cases exercising the invariants.
-  From there, we plan to prove that the semantic model satisfies the
-  invariants (proof in Coq), and to check that the implementation respects
-  the model thanks to litmus-test cases.
-  Each following step adds a single feature.
-  We formalise the feature, and expect to show formally and experimentally
-  that the improved system simulates the simpler one.
-  We expect that the features compose, so that the correctness of the full
-  system with all the features follows from the individual proofs.
-  At the time of writing, the operational semantics for several steps is
-  complete; the translation to Coq and the reference implementation are
-  ongoing.
+  This paper describes the design and implementation of a full-featured,
+  high-performance geo-distributed database backend that is correct by
+  construction.
+  We develop hand-in-hand an operational semantics, key
+  invariants, and a reference implementation.
+  Our baseline is a simplistic backend that supports concurrent
+  transactions storing and retrieving versions in an unbounded memory.
+  Later steps add a single feature, such as persistence, journaling,
+  caching, checkpointing, or sharding, to both the model and the
+  implementation.
+  We first prove (in Coq) that the baseline model satisfies its
+  invariants and show (by testing) that the reference implementation
+  satisfies the model.
+  For each additional feature, we prove a simulation relation between
+  the base and extended model, and similarly for the reference
+  implementation.
+  This paper focuses on the reference implementation: its relation
+  between the model, and how we instrument the code with asserts and on
+  the litmus tests.
+  % At the time of writing, the operational semantics for several steps is
+  % complete; the translation to Coq and the reference implementation are
+  % ongoing.
 
   \MotsCles{
     système réparti,
@@ -73,7 +78,7 @@
     }
 \end{abstract}
 
-\tableofcontents
+% \tableofcontents
 
 %=========================================================
 \section{Introduction}
