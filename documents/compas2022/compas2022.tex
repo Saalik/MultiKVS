@@ -216,7 +216,13 @@ This means all operations executed by the client must be part of a \emph{live} t
 This also include the commit and abort call.
 Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
 
-In this section we present the general logic of each call followed by the invariants checks.
+In this section we present the system invariants and the general logic of each call followed by the preconditions and postconditions.
+
+\textbf{System invariants} Every transaction depends on the updates of its snapshot. Therefore for every transaction the commit timestamp $\mathit{Dt}$ must be higher than its dependency timestamp $\mathit{Ct}$:
+\begin{itemize}
+  \item $\mathit{Ct} \neq null => \mathit{Ct} > \mathit{Dt}$ 
+\end{itemize}
+
 
 
 \textbf{StartTransaction} When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
@@ -229,29 +235,27 @@ The transaction is then assigned a unique transaction identifier $\tau$ and $\em
   \centering
   \begin{tabular}{|c|c|c|c|}
     \hline
-    & & & \\
-    API & Preconditions & Invariants & Postconditions\\
-    & & & \\
+
+    API & Preconditions & Postconditions\\
     \hline
-    startTransaction & $\mathit{State \neq live}$ & $\mathit{Ct \neq null => Dt > Ct}$ & $\mathit{State = live}$\\
-    & & $\mathit{Ct = null}$ & \\
+    startTransaction & $\mathit{State = null}$ & $\mathit{State = live}$\\
+    & &  \\
     \hline
-    read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$ &\\
-    & & $\mathit{Ct = null}$ & \\
+    read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$\\
+    &  & \\
     \hline
-    effect & & $\mathit{State = live}$ & $\mathit{\varepsilon = \varepsilon \cup \{(key, \tau)\}}$ \\
-    & & $\mathit{Ct = null}$ & \\
+    effect & $\mathit{State = live}$ & $\mathit{\varepsilon' = \varepsilon \cup \{(key, \tau)\}}$ \\
+    &  & \\
     \hline
-    commit & $\mathit{State = live}$ &  & $\mathit{Store' = Store \cup \varepsilon}$\\
-    & $\mathit{Ct = null}$ & & $\mathit{State = terminated}$ \\
-    & & & $\mathit{Dt \geq Ct}$ \\
+    commit & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
+    &  & $\mathit{Store' = Store \cup \varepsilon}$ \\
     \hline
-    abort & $\mathit{State = live}$ & $\mathit{Ct = null}$ & $\mathit{State = terminated}$\\
-    & & & \\
+    abort & $\mathit{State = live}$ & $\mathit{State = terminated}$ \\
+    &  &   \\
     \hline
 
   \end{tabular}
-  \caption{Asserts and invariants for each API call}
+  \caption{Unbounded-Memory Version store: Asserts and invariants for each API call}
   \label{tab:AssertInvariantsUnbounded}
 \end{table}
 
@@ -292,35 +296,35 @@ We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
 When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningTr}. 
 And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
 
-\begin{table}
-  \centering
-  \begin{tabular}{|c|c|c|c|}
-    \hline
-    & & & \\
-    API & Preconditions & Invariants & Postconditions\\
-    & & & \\
-    \hline
-    startTransaction & $\mathit{State \neq live}$ & $\mathit{Ct \neq null => Dt > Ct}$ & $\mathit{State = live}$\\
-    & & $\mathit{Ct = null}$ & \\
-    \hline
-    read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$ &\\
-    & & $\mathit{Ct = null}$ & \\
-    \hline
-    effect & & $\mathit{State = live}$ & $\mathit{\varepsilon = \varepsilon \cup \{(key, \tau)\}}$ \\
-    & & $\mathit{Ct = null}$ & \\
-    \hline
-    \rowcolor{lightgray} commit & $\mathit{State = live}$ & $\mathit{M_{used} < M_{limit}}$ & $\mathit{Store' = Store \cup \varepsilon}$\\
-    \rowcolor{lightgray} & $\mathit{Ct = null}$ & & $\mathit{State = terminated}$ \\
-    \rowcolor{lightgray} & & & $\mathit{Dt \geq Ct}$ \\
-    \hline
-    abort & $\mathit{State = live}$ & $\mathit{Ct = null}$ & $\mathit{State = terminated}$\\
-    & & & \\
-    \hline
+% \begin{table}
+%   \centering
+%   \begin{tabular}{|c|c|c|c|}
+%     \hline
+%     & & & \\
+%     API & Preconditions & Invariants & Postconditions\\
+%     & & & \\
+%     \hline
+%     startTransaction & $\mathit{State \neq live}$ & $\mathit{Ct \neq null => Dt > Ct}$ & $\mathit{State = live}$\\
+%     & & $\mathit{Ct = null}$ & \\
+%     \hline
+%     read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$ &\\
+%     & & $\mathit{Ct = null}$ & \\
+%     \hline
+%     effect & & $\mathit{State = live}$ & $\mathit{\varepsilon = \varepsilon \cup \{(key, \tau)\}}$ \\
+%     & & $\mathit{Ct = null}$ & \\
+%     \hline
+%     \rowcolor{lightgray} commit & $\mathit{State = live}$ & $\mathit{M_{used} < M_{limit}}$ & $\mathit{Store' = Store \cup \varepsilon}$\\
+%     \rowcolor{lightgray} & $\mathit{Ct = null}$ & & $\mathit{State = terminated}$ \\
+%     \rowcolor{lightgray} & & & $\mathit{Dt \geq Ct}$ \\
+%     \hline
+%     abort & $\mathit{State = live}$ & $\mathit{Ct = null}$ & $\mathit{State = terminated}$\\
+%     & & & \\
+%     \hline
 
-  \end{tabular}
-  \caption{Bounded Memory Version Store: Asserts and invariants for each API call}
-  \label{tab:AssertInvariantsBounded}
-\end{table}
+%   \end{tabular}
+%   \caption{Bounded-Memory Version Store: Asserts and invariants for each API call}
+%   \label{tab:AssertInvariantsBounded}
+% \end{table}
 
 \subsubsection{Garbage collection}
 
@@ -331,7 +335,26 @@ If at the end of the Garbage Collection the memory used is still higher than all
 
 \section{Testing}
 
-WIP
+Each implementation is built with the same client interface. 
+This way we can execute the same set of tests on each implementation.
+
+When two versions of the backend are achieved we a run different types of tests in order to show that the versions are equivalent.
+First we have a determined set of transaction that are used to execute simple transactions, followed by tests that trigger our invariants purposefully.
+
+Then our goal is to show that the Bounded-Memory version store is equivalent to the Unbounded version store as long as we execute transactions that have a dependency higher or equal than $\mathit{minDt}$.
+Then we show that transactions that have a dependency timestamp lower than $\mathit{minDt}$ might return different results and/or be aborted.
+
+\section{Conclusion}
+
+We have written several steps of the operational semantics, we have implemented the first partial versions of our design.
+Later we plan on adding the following features to the database: persistency, Unbounded Journal, Bounded journal with Checkpoints and finally a Cache.
+
+For each feature we will complete the operational semantics by adding the necessary invariants for maintain safety.
+Followed by a corresponding implementation matching our specification.
+Through testing we show that our implementation simulate our operational semantics.
+And that every step of the implementation simulate the following within the added contraints added by the new feature.
+Finally we will provide a translation of the model in coq.
+
 
 % \subsection{Garbage collectio - WIP}
 % When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
