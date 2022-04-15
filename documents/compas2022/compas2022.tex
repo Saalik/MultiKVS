@@ -96,9 +96,13 @@ Existing backends are designed in a manual and ad-hoc manner;
 inevitably, they have bugs that impact the consistency and integrity of
 data.
 
-The goal of this work is to build a database backend that is correct by
+Our research claim is that, for a complex system such as a database
+backend, following a formal model helps the developer avoid bugs, and is
+not in conflict with good performance.
+In this work, we aim to to build a database backend that is correct by
 design, while including some important optimisations (e.g., caching) and
 properties (e.g., fault tolerance).
+
 Formalising a backend that provide users with fast read and writes,
 data safety and geo-replication is hard.
 Any attempt to verify at once some monolithic specification that
@@ -106,14 +110,13 @@ includes all the interesting properties, is probably doomed to failure.
 Instead, we propose the an incremental approach,  decomposing the
 system into a set of small, orthogonal modules and features.
 
-Our starting baseline is a bare-bones and ``obviously correct'' backend,
-restricted to its simplest function, i.e., transactions reading and
-writing data.
+Our starting baseline is a bare-bones backend, restricted to its
+simplest function, i.e., transactions reading and writing data versions.
 We formalise its operational semantics and specify its invariants.
 We prove (in Coq) that the semantics satisfies the invariants.
-We also provide a (hand-written) reference implementation, and use test
-cases derived from the formal model to check that it follows the
-semantics and does not violate the invariants.
+We also provide a reference implementation (hand-written in Java), and
+use litmus test cases to check that it follows the semantics and does
+not violate the invariants.
 
 Each design step adds a single feature, e.g., a cache or logging,
 with its associated operational semantics and invariants.
@@ -125,81 +128,84 @@ Furthermore, we compare performance without and with the feature.
 Our ultimate aim is to show that the final design, including all the
 features, is both correct (by simulation of the baseline) and has
 comparable performance to ad-hoc database backends with similar features.
-We claim that providing developers with a clear model helps to implement
-a correct, high performance and geo-distributed database backend.
 
-\section{Transactions and timestamps}
+This paper gives some background on the formal model and focuses on the
+system part, i.e., how the reference implementation follows the model,
+how we instrument the invariants, and how we conduct the testing.
+
+\section{Background}
+\label{sec:background}
+
+\subsection{Transactions and timestamps}
 \label{sec:transactions}
-
 
 A client of the backend executes transactions.
 Classically, a transaction is a sequence of reads and updates, bounded by
 a begin and an end.
 The transaction either aborts with no effects; or it commits and all its
-commits become visible atomically to later transactions.
+commits become visible atomically.
 Formally, the choice between abort and commit is non-deterministic (in
 practice it depends on the application's invariants and on external
 events, such as sufficient resources being available).
 
 We formalise the mutual ordering of transactions with abstract
 \emph{timestamps}.
-Committing a transaction $i$ assigns it a commit timestamp
-$\mathit{Ct}_{i}$; all its updates are labelled with this commit
-timestamp.
+Committing a transaction $i$ assigns it a \emph{commit timestamp}
+$\mathit{Ct}_{i}$; for atomicity, its updates are all labelled
+with this same timestamp.
 Conversely, a transaction $j$  has a \emph{snapshot timestamp} (or dependency
 timestamp) $\mathit{Dt}_{j}$.
 Transaction $i$ precedes transaction $j$ if $\mathit{Ct}_{i} \le
 \mathit{Dt}_{j}$.
 Transaction $j$ \emph{depends on} all transactions $i$ such $i$ precedes
-$j$; any read that $j$ performs includes all the updates with a label
-less or equal to $\mathit{Dt}_{j}$.
+$j$, meaning that a read that $j$ performs includes all the updates with
+a label less or equal to $\mathit{Dt}_{j}$.
 The set of such preceding updates is called the \emph{snapshot} of
 transaction $j$.
  
-Our formalisation is agnostic to the transaction model (e.g.,
-serialisable or snapshot-isolation).
 For space reasons, this paper considers a single model, Transactional
 Causal Plus Consistency (TCC+), i.e., causal consistency with
 transactions and convergence \cite{rep:syn:sh228,rep:pro:sh182}.
 Under TCC+, timestamps form a partial order (consistent with
 happened-before), and a snapshot must be a causally-consistent cut.
-Other transaction models differ by timestamp ordering being partial or
-total, and by constraints on beginning and committing a transaction.
+However, our formalisation supports different transaction models (e.g.,
+serialisable or snapshot-isolation), which differ only by timestamp
+ordering being partial or total, and by constraints on beginning and
+committing a transaction.
 
-The formal model represents a transaction with the following information:
+A transaction $t$ has the following attributes:
 \begin{compactitem}
-\item $\tau$: unique transaction identifier.
-\item $\mathit{Dt}$: dependency timestamp.
-\item {$\varepsilon$}: effect map, records the updates made by the
+\item $\tau_{t}$: unique transaction identifier.
+\item $\mathit{Dt}_{t}$: dependency timestamp.
+\item {$\varepsilon_{t}$}: effect map, records the updates made by the
   transaction.
   A write updates the effect map.
-\item ${R}$: read set, records the objects read by the transaction.
+\item ${R}_{t}$: read set, records the objects read by the transaction.
   A Read updates the read set.
-\item $\mathit{Ct}$: commit timestamp, assigned if and when the
+\item $\mathit{Ct}_{t}$: commit timestamp, assigned if and when the
   transaction commits.
-\item $\mathit{State}$: status, either \emph{not\_started}, \emph{live} or \emph{terminated}.\\
+\item $\mathit{State}_{t}$: status, either \emph{not\_started}, \emph{live} or \emph{terminated}.
 \end{compactitem}
-
-
+In what follows, we omit the subscript if it is obvious from the context.
 
 \subsection{Object-versions}
 
-In order to be generic and agnostic to transaction model, our formalism
-considers that each update (or more precisely, the associated commit)
-creates a new version of the updated object.%
+For generality, we consider that each update (or, more precisely, the
+associated commit) creates a new version of the updated object.%
 %
 \footnote{
 %
-  This is compatible with Multi-Version Concurrency Control (MVCC), used
-  by many databases to increase parallelism, but does not mandate MVCC
-  in the implementation.
+  This is standard for databases that use Multi-Version Concurrency
+  Control (MVCC), but our model does not mandate MVCC in the
+  implementation.
 }
 %
 As mentioned above, each such version is labelled with the commit
 timestamp of the corresponding transaction.
 A particular version of a particular object maps the pair
-$(\mathit{key},\mathit{Ct})$ to the corresponding value, which for the
-purposes of this paper is an untyped ``\emph{blob}.''
+$(\mathit{key},\mathit{Ct})$, where $\mathit{key}$ identifies the
+object, to the corresponding value, which for the purposes of this paper
+is an untyped ``\emph{blob}.''
 In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
@@ -207,28 +213,31 @@ that writes this object-version.
 \section{Unbounded Version Store}
 
 We start with an intuitive simple in-memory key-value store.
-Therefore if a crash or restart occurs the database is lost.
-The implementation is in Java using a MultiMap<Key, Value> as backend.
-In order to maintain our consistency criteria we maintain seperatly a Graph of dependency between transactions.
+% Therefore if a crash or restart occurs the database is lost.
+The implementation uses the Java \texttt{MultiMap<Key, Value>} for
+storing the object versions.
+Following Section~\ref{sec:transactions}, a Java Transaction object has
+attributes \texttt{transactionID}, \texttt{EffectMap}, \texttt{ReadSet},
+etc.
+In addition, to speed up processing, we explicitly store the
+dependency graph of transactions.
 
-We created a Transaction class that is used by both the client and the backend to handle transactions.
-Every Transaction object is initalized with a unique identifier transactionID and a second transactionID named dependency.
-The latter represent the transactionID of the transaction it depends on.
-When a client create a Transaction an EffectMap and a ReadSet are initalized to keep track of the operations made by the client.
-The general behavior is as follows.
-A client starts a transaction and execute a sequence of operations and tries to commit or abort the transaction.
-This means all operations executed by the client must be part of a \emph{live} transaction.
-This also include the commit and abort call.
-Another guarantee our model provide is that for any committed transaction, the commit timestamp must be greater than the dependency timestamp.
+The code is instrumented with Java \texttt{assert}s, both to check
+arguments, and to make sure that the invariants specified in the model
+are not violated, as we explain next, and as summarised in
+Table~\ref{tab:AssertInvariantsUnbounded}.
 
-In this section we present the general logic of each call followed by the invariants checks.
+For instance, an assert checks that, for a committed transaction, its
+commit timestamp is greater than its dependency timestamp.
+To ensure that a client runs a sequence of well-formed transactions,
+asserts check that every transactional operation (read, write, commit or
+abort requests) takes place within a \emph{live} transaction, and that
+only one transaction is live at a time.
 
-
-\textbf{StartTransaction} When a client starts a transaction, if the client specify a dependency timestamp $Dt$ the system checks if it is valid in regards to consistency guarantees and creates a transaction object.
-The validity is handled by a seperate APi call that implements the consistency logic seperatly.
-If no dependency timestamp is specified than system assigns a valid snapshot to the transaction.
-The transaction is then assigned a unique transaction identifier $\tau$ and $\emph{State} \leftarrow \emph{live}$.
-
+Creating a transaction checks that its dependency timestamp $Dt$ is
+valid, by calling a procedure that is specific to the consistency model;
+for instance, in the TCC+ model, it checks that $Dt$ forms a
+causally-consistent snapshot.
 
 \begin{table}
   \centering
