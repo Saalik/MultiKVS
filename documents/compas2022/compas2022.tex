@@ -23,6 +23,11 @@
 
 \toappear{1} % Conserver cette ligne pour la version finale
 
+\newcommand{\commentaire}[2][fromWhom?]{%
+  {%
+    \color{magenta}{\bfseries\sffamily\scriptsize$\triangleright$(#1:) #2$\triangleleft$}%
+  }}
+
 \begin{document}
 \selectlanguage{english}
 
@@ -210,81 +215,147 @@ In the above, $\mathit{key}$ is the unique identifier or key of the
 object, and $\mathit{Ct}$ is the commit timestamp of the transaction
 that writes this object-version.
 
+% \begin{table}
+%   \centering
+%   \begin{tabular}{|c|c|c|c|}
+%     \hline
+
+%     API & Preconditions & Postconditions\\
+%     \hline
+%     startTransaction & $\mathit{State = null}$ & $\mathit{State = live}$\\
+%     & &  \\
+%     \hline
+%     read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$\\
+%     &  & \\
+%     \hline
+%     effect & $\mathit{State = live}$ & $\mathit{\varepsilon' = \varepsilon \cup \{(key, \tau)\}}$ \\
+%     &  & \\
+%     \hline
+%     commit & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
+%     &  & $\mathit{Store' = Store \cup \varepsilon}$ \\
+%     \hline
+%     abort & $\mathit{State = live}$ & $\mathit{State = terminated}$ \\
+%     &  &   \\
+%     \hline
+
+%   \end{tabular}
+%   \caption{Unbounded-Memory Version store: Asserts and invariants for each API call}
+%   \label{tab:AssertInvariantsUnbounded}
+% \end{table}
+\begin{table}
+  \centering
+  \begin{tabular}{c|c|c}
+    ~                       & Precondition            & Postcondition \\
+    \hline
+    
+    start transaction       & $\mathit{State = null}$ & $\mathit{State = live}$\\
+                            & model-specific          & $                      $\\
+
+    \hline
+
+    $\mathit{update(key,u)}$& $\mathit{State = live}$ & $\mathit{\varepsilon' = \varepsilon \cup \{(key, u)\}}$ \\
+
+    \hline
+
+    $\mathit{read(key)}$    & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$\\
+    $\rightarrow{}r$        &                          & $r = \mathit{lookup(\varepsilon,key,Store,Dt)}$ \\
+
+    \hline
+
+    commit                  & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
+                            & model-specific          & $\mathit{Store' = Store \cup \varepsilon}$ \\
+                            &                         & $\mathit{Dt < Ct}$ \\
+    \hline
+
+    abort                   & $\mathit{State = live}$ & $\mathit{State = terminated}$ \\
+
+  \end{tabular}
+
+  \commentaire[Marc]{@Saalik: Your postcondition for commit does not add the
+    transaction tag!!!}
+  
+  \caption{Unbounded-Memory Version store: pre- and post-conditions}
+  \label{tab:AssertInvariantsUnbounded}
+\end{table}
+
 \section{Unbounded Version Store}
+
+\commentaire[Marc]{Pas strictement conforme au modèle : tu n'utilises pas les
+  transactions mais leurs timestamps.}
 
 We start with an intuitive simple in-memory key-value store.
 % Therefore if a crash or restart occurs the database is lost.
 The implementation uses the Java \texttt{MultiMap<Key, Value>} for
 storing the object versions.
+\commentaire[Marc]{Pourquoi pas une mappe <key+transaction, value>?}
 Following Section~\ref{sec:transactions}, a Java Transaction object has
 attributes \texttt{transactionID}, \texttt{EffectMap}, \texttt{ReadSet},
 etc.
 In addition, to speed up processing, we explicitly store the
 dependency graph of transactions.
+\commentaire[Marc]{Optimisation précoce~???}
 
 The code is instrumented with Java \texttt{assert}s, both to check
 arguments, and to make sure that the invariants specified in the model
 are not violated, as we explain next, and as summarised in
 Table~\ref{tab:AssertInvariantsUnbounded}.
 
-For instance, an assert checks that, for a committed transaction, its
-commit timestamp is greater than its dependency timestamp.
+For instance, an assert checks that the commit timestamp of a committed
+transaction is greater than its dependency timestamp.
+\commentaire[Marc]{Pas une postcondition, mais un invariant : si non
+  commité, $Ct=+\infty$}.
 To ensure that a client runs a sequence of well-formed transactions,
 asserts check that every transactional operation (read, write, commit or
 abort requests) takes place within a \emph{live} transaction, and that
 only one transaction is live at a time.
 
 Creating a transaction checks that its dependency timestamp $Dt$ is
-valid, by calling a procedure that is specific to the consistency model;
-for instance, in the TCC+ model, it checks that $Dt$ forms a
+valid, by calling a procedure that is specific to the consistency model.
+For instance, in the TCC+ model, it checks that $Dt$ forms a
 causally-consistent snapshot.
 
-\begin{table}
-  \centering
-  \begin{tabular}{|c|c|c|c|}
-    \hline
+\commentaire[Marc]{En fait ce n'est pas une précondition de start-transaction, c'est un
+  invariant, car read peut faire avancer le snapshot (cf.~Ayush).}
 
-    API & Preconditions & Postconditions\\
-    \hline
-    startTransaction & $\mathit{State = null}$ & $\mathit{State = live}$\\
-    & &  \\
-    \hline
-    read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$\\
-    &  & \\
-    \hline
-    effect & $\mathit{State = live}$ & $\mathit{\varepsilon' = \varepsilon \cup \{(key, \tau)\}}$ \\
-    &  & \\
-    \hline
-    commit & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
-    &  & $\mathit{Store' = Store \cup \varepsilon}$ \\
-    \hline
-    abort & $\mathit{State = live}$ & $\mathit{State = terminated}$ \\
-    &  &   \\
-    \hline
+To update a key, the system adds the update to the effect buffer
+associated with the transaction.%
+%
+\footnote{
+%
+  To simplify the notation, our postcondition assumes a key is updated
+  only once per transaction.
+}
+%
 
-  \end{tabular}
-  \caption{Unbounded-Memory Version store: Asserts and invariants for each API call}
-  \label{tab:AssertInvariantsUnbounded}
-\end{table}
+Reading a key retrieves the key's value.
+There are two cases.
+If the transaction has previously updated the key, it returns the value
+in the effect buffer.
+Otherwise, it fetches the value corresponding to the transaction's
+snapshot from the store, looking up the most recent version of the key
+in the store whose timestamp is less or equal to $\mathit{Dt}$.
+If the snapshot contains concurrent object-versions (i.e., written by
+concurrent commits), they are merged \cite{syn:rep:sh143}.
+If there is no preceding update in the store, it returns a default
+value.
+Finally the system adds the key in the read-set $R$ of the transaction. 
 
-\textbf{Read} returns the correct Object-version in the store that is valid in regads to our consistency model.
-If two conccurent Object-versions exist, meaning they are part of two transaction that have a commit timestamp lower or equal than the dependency timestamp and are not related by precedence.
-We use a deterministic algorithm, ie. merge or LWW, to choose the Object-version returned.
-In case there are no existing Object-version in memory we return a default value.
-Finally the system adds the key in the ReadSet $R$ of the transaction. 
-
-
-\textbf{Effect} the system creates a new Object-version by merging the previous version that is returned by \emph{read(key)} with the effect.
-
-\textbf{Commit} the system checks if the effects $\varepsilon_i$ are valid in regards to the consistency model and abort if not. (Need more precision. Maybe earlier here does not seem to be the correct section)
-If the effects are valid the Objects versions are added to the Store and assigns a commit timestamp $Ct_i$.
-Finally the transaction's $State$ is set to $terminated$ making the effects visible in the store atomically.
-
-\textbf{Abort} updates the state of the transaction to $terminated$ without updating the Store with the effects of the transaction and no commit timestamp is assigned
+When the client terminates the transaction, the system checks whether
+the effects in $\varepsilon$ are valid according the consistency model
+(under TCC+, this is always the case).
+The transaction commits only if this is true; this sets a commit
+timestamp, and moves the updates
+from the effect buffer into the store, tagged by the commit timestamp.
+\commentaire[Marc]{D'après le modèle le tag serait l'ID de transaction.}
+If not, the transaction aborts, by simply moving to the terminated
+state.
+A transaction may also abort non-deterministically.
 
 \subsection{Bounded-Memory Version Store}
 
-Once we have the Unbounded Version Store impelmented we add an arbitrary limitation on the size of the memory used by the system.
+Our next step will be to impose a bound on the size of the store.
+
+\commentaire[Marc]{Stopped here **** 2022-04-16 10:40}
 
 \textbf{System invariants}
 All invariants from the Unbounded memory are valid in this system.
