@@ -248,7 +248,7 @@ that writes this object-version.
     ~                       & Precondition            & Postcondition \\
     \hline
     
-    start transaction       & $\mathit{State = null}$ & $\mathit{State = live}$\\
+    $\mathit{startTransaction()}$      & $\mathit{State = null}$ & $\mathit{State = live}$\\
                             & model-specific          & $                      $\\
 
     \hline
@@ -258,21 +258,23 @@ that writes this object-version.
     \hline
 
     $\mathit{read(key)}$    & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$\\
-    $\rightarrow{}r$        &                          & $r = \mathit{lookup(\varepsilon,key,Store,Dt)}$ \\
+    $\rightarrow{}r$        &                         & $r = \mathit{lookup(\varepsilon,key,Store,Dt)}$ \\
 
     \hline
 
-    commit                  & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
-                            & model-specific          & $\mathit{Store' = Store \cup \varepsilon}$ \\
+    $\mathit{commit()}$     & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
+    model-specific          &                         & $\mathit{Store' = Store \cup \varepsilon}$ \\
                             &                         & $\mathit{Dt < Ct}$ \\
     \hline
 
-    abort                   & $\mathit{State = live}$ & $\mathit{State = terminated}$ \\
+    $\mathit{abort()}$      & $\mathit{State = live}$ & $\mathit{State = terminated}$ \\
 
   \end{tabular}
 
   \commentaire[Marc]{@Saalik: Your postcondition for commit does not add the
-    transaction tag!!!}
+    transaction tag!!!}\\ 
+  \commentaire[Saalik]{Because it's not supposed to be in the post conditions? 
+  I just say that at the end the Ct should be higher than the Dt}
   
   \caption{Unbounded-Memory Version store: pre- and post-conditions}
   \label{tab:AssertInvariantsUnbounded}
@@ -287,23 +289,23 @@ We start with an intuitive simple in-memory key-value store.
 % Therefore if a crash or restart occurs the database is lost.
 The implementation uses the Java \texttt{MultiMap<Key, Value>} for
 storing the object versions.
-\commentaire[Marc]{Pourquoi pas une mappe <key+transaction, value>?}
+% \commentaire[Marc]{Pourquoi pas une mappe <key+transaction, value>?}
 Following Section~\ref{sec:transactions}, a Java Transaction object has
 attributes \texttt{transactionID}, \texttt{EffectMap}, \texttt{ReadSet},
-etc.
+etc. 
 In addition, to speed up processing, we explicitly store the
 dependency graph of transactions.
-\commentaire[Marc]{Optimisation précoce~???}
+% \commentaire[Marc]{Optimisation précoce~???}
 
-The code is instrumented with Java \texttt{assert}s, both to check
+The code is instrumented with Google Guava's \emph{checkArgument} library\cite{guava}, both to check
 arguments, and to make sure that the invariants specified in the model
 are not violated, as we explain next, and as summarised in
 Table~\ref{tab:AssertInvariantsUnbounded}.
 
 For instance, an assert checks that the commit timestamp of a committed
 transaction is greater than its dependency timestamp.
-\commentaire[Marc]{Pas une postcondition, mais un invariant : si non
-  commité, $Ct=+\infty$}.
+% \commentaire[Marc]{Pas une postcondition, mais un invariant : si non
+  % commité, $Ct=+\infty$}.
 To ensure that a client runs a sequence of well-formed transactions,
 asserts check that every transactional operation (read, write, commit or
 abort requests) takes place within a \emph{live} transaction, and that
@@ -313,9 +315,6 @@ Creating a transaction checks that its dependency timestamp $Dt$ is
 valid, by calling a procedure that is specific to the consistency model.
 For instance, in the TCC+ model, it checks that $Dt$ forms a
 causally-consistent snapshot.
-
-\commentaire[Marc]{En fait ce n'est pas une précondition de start-transaction, c'est un
-  invariant, car read peut faire avancer le snapshot (cf.~Ayush).}
 
 To update a key, the system adds the update to the effect buffer
 associated with the transaction.%
@@ -345,8 +344,7 @@ the effects in $\varepsilon$ are valid according the consistency model
 (under TCC+, this is always the case).
 The transaction commits only if this is true; this sets a commit
 timestamp, and moves the updates
-from the effect buffer into the store, tagged by the commit timestamp.
-\commentaire[Marc]{D'après le modèle le tag serait l'ID de transaction.}
+from the effect buffer into the store, tagged by the transactionID.
 If not, the transaction aborts, by simply moving to the terminated
 state.
 A transaction may also abort non-deterministically.
@@ -465,9 +463,8 @@ Finally we will provide a translation of the model in coq.
 
 
 
-\section{Conclusion}
 
-\bibliography{exemple,predef,shapiro-bib-ext,shapiro-bib-perso}
+\bibliography{compas,predef,shapiro-bib-ext,shapiro-bib-perso}
 
 
 \end{document}
