@@ -12,10 +12,18 @@
 \usepackage[table,x11names]{xcolor}
 \usepackage[T1]{fontenc} %% Vector fonts
 \usepackage[numbers,square,sort&compress]{natbib} %% Better bibliography
-\usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
+% \usepackage{parskip} \parskip=1ex plus 5pt minus 1pt \parindent=4ex %% indent paragraphs
 \usepackage{xspace}  %% Macros with automatic spacing
 \usepackage[defblank]{paralist}  %% inline lists
 
+% \usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+% \usepackage[french]{babel}
+% \usepackage{epsfig}
+% \usepackage{amsmath}
+% \usepackage{amssymb}
+% \usepackage{euler}
+% \usepackage{palatino}
 
 %===========================================================
 %                               Title
@@ -271,10 +279,10 @@ that writes this object-version.
 
   \end{tabular}
 
-  \commentaire[Marc]{@Saalik: Your postcondition for commit does not add the
-    transaction tag!!!}\\ 
-  \commentaire[Saalik]{Because it's not supposed to be in the post conditions? 
-  I just say that at the end the Ct should be higher than the Dt}
+  % \commentaire[Marc]{@Saalik: Your postcondition for commit does not add the
+  %   transaction tag!!!}\\ 
+  % \commentaire[Saalik]{Because it's not supposed to be in the post conditions? 
+  % I just say that at the end the Ct should be higher than the Dt}
   
   \caption{Unbounded-Memory Version store: pre- and post-conditions}
   \label{tab:AssertInvariantsUnbounded}
@@ -282,8 +290,8 @@ that writes this object-version.
 
 \section{Unbounded Version Store}
 
-\commentaire[Marc]{Pas strictement conforme au modèle : tu n'utilises pas les
-  transactions mais leurs timestamps.}
+% \commentaire[Marc]{Pas strictement conforme au modèle : tu n'utilises pas les
+%   transactions mais leurs timestamps.}
 
 We start with an intuitive simple in-memory key-value store.
 % Therefore if a crash or restart occurs the database is lost.
@@ -297,7 +305,8 @@ In addition, to speed up processing, we explicitly store the
 dependency graph of transactions.
 % \commentaire[Marc]{Optimisation précoce~???}
 
-The code is instrumented with Google Guava's \emph{checkArgument} library\cite{guava}, both to check
+The code is instrumented with Google Guava's \emph{checkArgument} library\cite{guava}
+to perform assertions, both to check
 arguments, and to make sure that the invariants specified in the model
 are not violated, as we explain next, and as summarised in
 Table~\ref{tab:AssertInvariantsUnbounded}.
@@ -353,25 +362,35 @@ A transaction may also abort non-deterministically.
 
 Our next step will be to impose a bound on the size of the store.
 
-\commentaire[Marc]{Stopped here **** 2022-04-16 10:40}
-
-\textbf{System invariants}
+% \commentaire[Marc]{Stopped here **** 2022-04-16 10:40}
 All invariants from the Unbounded memory are valid in this system.
-In order to keep track of memory utilization in the system we introduce introduce a two new values:
-\begin{itemize}
-  \item \emph{$M_{used}$} contains the current size of data in memory
-  \item \emph{$M_{limit}$} represents the maximum size available to the database
-\end{itemize}
+We create a global value called $\mathit{M_{limit}}$ that contains the size 
+limit for the $\mathit{Store}$.
+We also keep track of current memory utilization represented by $\mathit{M_{used}}$.
+To simplify our model we only consider the size of the $\mathit{Store}$, running transactions does not affect the invariant.
 Based on these two variables we introduce a new system invariant:
 \begin{itemize}
   \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
 \end{itemize}
-In order to uphold the memory constraints of the system we keep track of all the dependencies of running transactions called \emph{RunningTr} but also all the commit timestamps of finished transactions \emph{CommitTr}.
 
-We then introduce a new timestamp called Minimum Dependency \emph{MinDt}.
+Everytime a transaction commits $\mathit{M_{used}}$ is updated to ensure that the size of the $\mathit{Store}$ does not grow beyond the limit set by the system.
+
+If the threshold is reached, the system has two possibilities regarding running transactions, abort all running transaction or halt commits until an eviction of outdated Object-Version is performed.
+
+For the eviction to happen safely, the system must ensure that every running transaction is able to read from its dependency snapshot.
+To uphold the new system invariants, we keep track of all the dependencies of running transactions called \emph{RunningTr} but also all the commit timestamps of finished transactions \emph{CommitTr}.
+
+We then introduce a new timestamp called Minimum Dependency $\mathit{MinDt}$.
 \emph{MinDt} represents the oldest snapshot any running transaction is reading from.
-When a transaction $\tau_i$ commits or aborts, it is removed from \emph{RunningTr}. 
-And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
+When a transaction $\tau$ commits or aborts, it is removed from \emph{RunningTr}. 
+If $\mathit{Dt= MinDt}$ and no other transaction is reading from $\mathit{Dt}$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
+
+Eviction of Object-Version is done through a Garbage Collection.
+The system perform a lookup on every key that is part of the snapshot $\mathit{MinDt}$.
+Every Object-version in the $\mathit{Store}$ that has a commit timestamp that is lower than $\mathit{MinDt}$ and cannot be returned by a $\mathit{lookup(key,Store,minDt)}$ is evicted.
+
+If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
+
 
 % \begin{table}
 %   \centering
@@ -403,18 +422,19 @@ And if $Dt_i = MinDt$ and no other transaction is reading from $Dt_i$ the system
 %   \label{tab:AssertInvariantsBounded}
 % \end{table}
 
-\subsubsection{Garbage collection}
+% \subsubsection{Garbage collection}
 
-If a client attempts to commit and the memory used invariant is violated then the system performs a garbage collection by iterating through all the Object-versions.
-Every Object-version that has a commit timestamp that is lower than MinDt is removed from the backend.
+% If a client attempts to commit and the memory used invariant is violated then the system performs a garbage collection by iterating through all the Object-versions.
+% Every Object-version that has a commit timestamp that is lower than MinDt is removed from the backend.
 
-If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
+% If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
 
 \section{Testing}
 
-Each implementation is built with the same client interface. 
+To simplify testing, every implementation is built with the same client interface. 
 This way we can execute the same set of tests on each implementation.
 
+We start be executing 
 When two versions of the backend are achieved we a run different types of tests in order to show that the versions are equivalent.
 First we have a determined set of transaction that are used to execute simple transactions, followed by tests that trigger our invariants purposefully.
 
