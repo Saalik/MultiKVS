@@ -119,7 +119,7 @@ properties (e.g., fault tolerance).
 Formalising a backend that provide users with fast read and writes,
 data safety and geo-replication is hard.
 Any attempt to verify at once some monolithic specification that
-includes all the interesting properties, is probably doomed to failure.
+includes all the interesting properties is probably doomed to failure.
 Instead, we propose the an incremental approach,  decomposing the
 system into a set of small, orthogonal modules and features.
 
@@ -346,10 +346,10 @@ If the snapshot contains concurrent object-versions (i.e., written by
 concurrent commits), they are merged \cite{syn:rep:sh143}.
 If there is no preceding update in the store, it returns a default
 value.
-Finally the system adds the key in the read-set $R$ of the transaction. 
+Finally, the system adds the key to the read-set $R$ of the transaction. 
 
 When the client terminates the transaction, the system checks whether
-the effects in $\varepsilon$ are valid according the consistency model
+the effects of $\varepsilon$ are valid according to the consistency model
 (under TCC+, this is always the case).
 The transaction commits only if this is true; this sets a commit
 timestamp, and moves the updates
@@ -373,7 +373,7 @@ Based on these two variables we introduce a new system invariant:
   \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
 \end{itemize}
 
-Everytime a transaction commits $\mathit{M_{used}}$ is updated to ensure that the size of the $\mathit{Store}$ does not grow beyond the limit set by the system.
+Every time a transaction commits $\mathit{M_{used}}$ is updated to ensure that the size of the $\mathit{Store}$ does not grow beyond the limit set by the system.
 
 If the threshold is reached, the system has two possibilities regarding running transactions, abort all running transaction or halt commits until an eviction of outdated Object-Version is performed.
 
@@ -386,7 +386,7 @@ When a transaction $\tau$ commits or aborts, it is removed from \emph{RunningTr}
 If $\mathit{Dt= MinDt}$ and no other transaction is reading from $\mathit{Dt}$ the system advances \emph{MinDt} to the next oldest snapshot used in \emph{RunningTr}.
 
 Eviction of Object-Version is done through a Garbage Collection.
-The system perform a lookup on every key that is part of the snapshot $\mathit{MinDt}$.
+The system performs a lookup on every key that is part of the snapshot $\mathit{MinDt}$.
 Every Object-version in the $\mathit{Store}$ that has a commit timestamp that is lower than $\mathit{MinDt}$ and cannot be returned by a $\mathit{lookup(key,Store,minDt)}$ is evicted.
 
 If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
@@ -432,55 +432,32 @@ If at the end of the Garbage Collection the memory used is still higher than all
 \section{Testing}
 
 To simplify testing, every implementation is built with the same client interface. 
-This way we can execute the same set of tests on each implementation.
 
-We start be executing 
-When two versions of the backend are achieved we a run different types of tests in order to show that the versions are equivalent.
-First we have a determined set of transaction that are used to execute simple transactions, followed by tests that trigger our invariants purposefully.
+We start by executing a predetermined sequence of transactions and verify that the general behavior of the backend is correct.
+Once this done we run randomized tests on both systems to check if the general behavior remains correct outside predefined scenarios.
 
-Then our goal is to show that the Bounded-Memory version store is equivalent to the Unbounded version store as long as we execute transactions that have a dependency higher or equal than $\mathit{minDt}$.
-Then we show that transactions that have a dependency timestamp lower than $\mathit{minDt}$ might return different results and/or be aborted.
+The next step is to check if our invariants are upheld by our implementation.
+Some invariants are directly inlined in the different functions.
+For others like checking if every transactional operation takes place within a $\mathit{live}$ transaction, we run each operation at least once outside a $\mathit{live}$ transaction and expect our system to crash.
+
+We want to show in our testing methodology that the Unbounded Version Store simulates the Bounded-Memory Version Store.
+The Bounded-Memory version has a constraint on the minimum snapshot allowed to be used by the system.
+So we execute the same sequence of transaction on both versions, where for every transaction the dependency snapshot is always higher than $\mathit{minDt}$ and expect to see the same results.
+Then we execute a second sequence of transaction that has dependencies lower the minDt and show the differences between the two traces.
+One execution should succeed where in the Bounded-Memory Version Store some transaction should abort.
+
+Finally, we plan on performing performance experiments to show that our design has comparable performance to ad hoc database backend.
 
 \section{Conclusion}
 
 We have written several steps of the operational semantics, we have implemented the first partial versions of our design.
-Later we plan on adding the following features to the database: persistency, Unbounded Journal, Bounded journal with Checkpoints and finally a Cache.
+Later we plan on adding the following features to the database: persistency, Unbounded Journal, Bounded journal with checkpoints and finally a cache.
 
-For each feature we will complete the operational semantics by adding the necessary invariants for maintain safety.
+For each feature we will complete the operational semantics by adding the necessary invariants for maintaining safety.
 Followed by a corresponding implementation matching our specification.
-Through testing we show that our implementation simulate our operational semantics.
-And that every step of the implementation simulate the following within the added contraints added by the new feature.
-Finally we will provide a translation of the model in coq.
-
-
-% \subsection{Garbage collectio - WIP}
-% When \emph{$M_{used}$} $\geq$ \emph{$M_{limit}$}. 
-% All the transaction in the system are halted in order to perform a garbage collection.
-
-% Ici je dois expliquer comment est fait le GC:\\
-% \begin{algorithm}
-%   \KwIn{\\ \Indp
-%     RunningTr : set
-%   }
-%   \(oldTr \longleftarrow \emptyset\)\;
-%   \ForAll{\(\tau_{i} \in Running\)}{
-%     \If{\(Dt_{i} < MinDt\)}{
-%       \(oldTr \longleftarrow \tau_i\)\;
-%     }
-%   }
-% \end{algorithm}
-
-% WIP
-
-
-% \subsection{Implementation - WIP}
-
-% Every model is implemented in java with external libraries for persistency, CRDTs and data structures that we consider being correct.
-% Implementation and evaluation of the different models have two purposes.
-% First we implement our different models as closely as possible to our specification and show that they are correct by running the same test on all versions.
-
-% Finally we plan on designing test that specifically targets breaking invariants defined in our model making sure the system crashes if they are violated, and run a set of traces that are generated from a Coq implementation.
-
+Through testing we show that our implementation simulates our operational semantics.
+And that every step of the implementation simulate the following within the added constraints added by the new feature.
+Finally, we will provide a translation of the model in Coq.
 
 
 
