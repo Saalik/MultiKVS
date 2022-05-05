@@ -1,4 +1,4 @@
-package Bounded;
+package BoundedStore;
 
 import Journal.Client;
 import Journal.KeyValueStore;

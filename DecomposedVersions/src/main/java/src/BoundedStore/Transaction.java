@@ -1,4 +1,4 @@
-package Bounded;
+package BoundedStore;
 
 import Types.Timestamp;
 import Types.TransactionID;
@@ -22,16 +22,16 @@ public class Transaction {
     // time of commit
     private Timestamp commit;
 
-    private Bounded.KeyValueStore backend;
+    private KeyValueStore backend;
 
-    public Transaction(Bounded.KeyValueStore backend){
+    public Transaction(KeyValueStore backend){
         id = new TransactionID(UUID.randomUUID().toString());
         dependency = backend.getLastTransactionID();;
         effectMap = new HashMap<>();
         this.backend = backend;
     }
 
-    public Transaction(Bounded.KeyValueStore backend, Timestamp dependency) {
+    public Transaction(KeyValueStore backend, Timestamp dependency) {
         id = new TransactionID(UUID.randomUUID().toString());
         this.dependency = dependency;
         effectMap = new HashMap<>();
@@ -49,7 +49,7 @@ public class Transaction {
                 newValue = Value.merge(oldValue ,value);
                 effectMap.put(key, newValue);
             } else {
-                Bounded.Value oldValue = backend.getValue(key, dependency);
+                Value oldValue = backend.getValue(key, dependency);
                 if (oldValue != null) {
                     newValue = Value.merge(oldValue ,value);
                     effectMap.put(key, newValue);
@@ -64,7 +64,7 @@ public class Transaction {
     
 
     public int get(String key) {
-        Bounded.Value value = effectMap.get(key);
+        Value value = effectMap.get(key);
         if (value != null) {
             return value.getValue();
         } else {
@@ -80,7 +80,7 @@ public class Transaction {
         return dependency;
     }
 
-    public HashMap<String, Bounded.Value> getEffectMap() {
+    public HashMap<String, Value> getEffectMap() {
         return effectMap;
     }
 }

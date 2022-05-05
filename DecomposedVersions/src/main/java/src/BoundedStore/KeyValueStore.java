@@ -1,4 +1,4 @@
-package Bounded;
+package BoundedStore;
 
 import Types.Timestamp;
 import Types.TransactionID;
@@ -26,13 +26,13 @@ public class KeyValueStore {
         minDependency = null;
     }
 
-    public void commitTransaction (Bounded.Transaction tr) {
+    public void commitTransaction (Transaction tr) {
         dependencyGraph.addNode(tr.getId());
         if (tr.getDependency() != null) {
             dependencyGraph.putEdge(tr.getDependency(), tr.getId());
         }
 
-        HashMap<String, Bounded.Value> operations = tr.getEffectMap();
+        HashMap<String, Value> operations = tr.getEffectMap();
 
         for (String key : operations.keySet()) {
             backend.put(key, operations.get(key));
@@ -40,13 +40,13 @@ public class KeyValueStore {
 
     }
 
-    public Bounded.Value getValue (String key, TransactionID transactionID) {
+    public Value getValue (String key, TransactionID transactionID) {
         boolean stopSearch = false;
 
         TransactionID trID = transactionID;
         if (backend.containsKey(key)) {
             while ( ! stopSearch ) {
-                for (Bounded.Value value : backend.get(key)) {
+                for (Value value : backend.get(key)) {
                     if (value.getTransactionID().equals(trID)) {
                         return value;
                     }

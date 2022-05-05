@@ -1,4 +1,4 @@
-package Bounded;
+package BoundedStore;
 import Interfaces.KVSClient;
 import Types.TransactionID;
 

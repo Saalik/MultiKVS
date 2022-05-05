@@ -1,8 +1,6 @@
-package MultiMap;
+package UnboundedStore;
 import Interfaces.KVSClient;
-import Types.Timestamp;
-import Types.TransactionID;
-
+import Types.*;
 import static com.google.common.base.Preconditions.checkArgument;
 
 
