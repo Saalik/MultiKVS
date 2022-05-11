@@ -2,13 +2,13 @@ package Types;
 
 import javax.annotation.Nullable;
 
-public class Value {
+public class ObjectVersions {
     private int value;
     private TransactionID transactionId;
     @Nullable
     private Timestamp commitTimestamp;
 
-    public Value(TransactionID transactionId, int value) {
+    public ObjectVersions(TransactionID transactionId, int value) {
         this.value = value;
         this.transactionId = transactionId;
         this.commitTimestamp = null;
@@ -28,8 +28,13 @@ public class Value {
         return commitTimestamp;
     }
 
-    static public Value merge(Value one, Value two) {
-        return new Value (two.getTransactionID(), one.getValue()+two.getValue());
+    /*
+    @TODO
+        Right now this merge function is basic
+        ObjectVersions is supposed to be augmented with CRDTS
+     */
+    static public ObjectVersions merge(ObjectVersions one, ObjectVersions two) {
+        return new ObjectVersions(two.getTransactionID(), one.getValue()+two.getValue());
     }
 
     public TransactionID getTransactionID() {

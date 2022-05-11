@@ -22,6 +22,7 @@ public interface KVSClient {
 
     int get(String key);
 
+
     TransactionID commitTransaction();
 
     void abort();

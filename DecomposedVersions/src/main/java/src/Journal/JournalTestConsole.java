@@ -79,12 +79,12 @@ public class JournalTestConsole {
             } else if (cmds[0].equals("help")) {
                 System.out.println(
                         "start: start transaction \n"
-                                + "state: get the state of the Key Value Store\n"
+                                + "state: get the state of the Key ObjectVersions Store\n"
                                 + "put key value \n"
                                 + "get key \n"
                                 + "commit \n"
                                 + "abort \n"
-                                + "populate: populates Key Value Store\n"
+                                + "populate: populates Key ObjectVersions Store\n"
                                 + "dependency: returns the current dependency transaction ID \n"
                                 + "help: list all the available commands \n"
                 );

@@ -1,8 +1,8 @@
-package UnboundedStore;
+package UnboundedReference;
 
 import Types.Timestamp;
 import Types.TransactionID;
-import Types.Value;
+import Types.ObjectVersions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.graph.GraphBuilder;
@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class KeyValueStore {
     Timestamp lastTransactionTimestamp;
-    Multimap<String, Value> backend;
+    Multimap<String, ObjectVersions> backend;
     MutableGraph<Timestamp> dependencyGraph;
     ConcurrentHashMap<Timestamp, TransactionID> index;
 
@@ -24,6 +24,8 @@ public class KeyValueStore {
         lastTransactionTimestamp = null;
     }
 
+    // @TODO Commit timestamp doit être unique
+    // Rajouter un assert pour montrer que chaque commit timestamp.
     public void commitTransaction (Transaction transaction) {
         transaction.setCommit(new Timestamp());
         index.put(transaction.getCommit(), transaction.getId());
@@ -34,23 +36,23 @@ public class KeyValueStore {
             dependencyGraph.putEdge(transaction.getDependency(), transaction.getCommit());
         }
 
-        HashMap<String, Value> operations = transaction.getEffectMap();
+        HashMap<String, ObjectVersions> operations = transaction.getEffectMap();
 
         for (String key : operations.keySet()) {
             backend.put(key, operations.get(key));
         }
     }
 
-    public Value getValue (String key, Timestamp dependency) {
+    public ObjectVersions getValue (String key, Timestamp dependency) {
         boolean stopSearch = false;
         Timestamp dependencyTimestamp = dependency;
         TransactionID trID = index.get(dependency);
 
         if (backend.containsKey(key)) {
             while ( ! stopSearch ) {
-                for (Value value : backend.get(key)) {
-                    if (value.getTransactionID().equals(trID)) {
-                        return value;
+                for (ObjectVersions objectVersions : backend.get(key)) {
+                    if (objectVersions.getTransactionID().equals(trID)) {
+                        return objectVersions;
                     }
                 }
                 if (dependencyGraph.predecessors(dependency).size() == 1) {

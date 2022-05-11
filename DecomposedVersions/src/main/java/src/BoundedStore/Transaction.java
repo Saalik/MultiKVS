@@ -58,7 +58,7 @@ public class Transaction {
                 }
             }
         } finally {
-            checkArgument(effectMap.containsValue(newValue), "Value was not added to effectMap");
+            checkArgument(effectMap.containsValue(newValue), "ObjectVersions was not added to effectMap");
         }
     }
     

@@ -1,9 +1,10 @@
-package UnboundedStore;
+package UnboundedVersionStore;
 
+import Types.Key;
 import Types.Timestamp;
 import Types.TransactionID;
-import Types.Value;
-
+import Types.ObjectVersions;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -14,16 +15,20 @@ public class Transaction {
     // Identifies the transactions this one depends upon
     private Timestamp dependency;
     // records the content of the transaction’s writes
-    private HashMap<String, Value> effectMap;
+    private HashMap<Key, ObjectVersions> effectMap;
     // records what objects the transaction has read
     private CopyOnWriteArraySet<String> readSet;
     // time of commit
     private Timestamp commit;
+    // @TODO Initialisation a +infini
+
 
     private KeyValueStore kvs;
 
+
     public Transaction(KeyValueStore kvs){
         id = new TransactionID(UUID.randomUUID().toString());
+        commit = new Timestamp(Instant.MIN);
         dependency = kvs.getLastTransactionTimestamp()  ;;
         effectMap = new HashMap<>();
         readSet = new CopyOnWriteArraySet<>();
@@ -43,29 +48,29 @@ public class Transaction {
     }
 
     //
-    public void effect(String key, int value) {
-        Value newValue = null;
+    public void effect(Key key, int value) {
+        ObjectVersions newObjectVersions = null;
 
         if (effectMap.containsKey(key)) {
-            Value oldValue = effectMap.get(key);
-            newValue = new Value(id, oldValue.getValue() + value);
-            effectMap.put(key, newValue);
+            ObjectVersions oldObjectVersions = effectMap.get(key);
+            newObjectVersions = new ObjectVersions(id, oldObjectVersions.getValue() + value);
+            effectMap.put(key, newObjectVersions);
         } else {
-            Value oldVal = kvs.getValue(key, dependency);
+            ObjectVersions oldVal = kvs.getValue(key, dependency);
             if (oldVal != null) {
-                newValue = new Value(id, value + oldVal.getValue());
-                effectMap.put(key, newValue);
+                newObjectVersions = new ObjectVersions(id, value + oldVal.getValue());
+                effectMap.put(key, newObjectVersions);
             } else {
-                effectMap.put(key, new Value(id, value));
+                effectMap.put(key, new ObjectVersions(id, value));
             }
         }
     }
 
     // TODO : This might return a null value
-    public int get(String key) {
-        Value value = effectMap.get(key);
-        if (value != null) {
-            return value.getValue();
+    public int get(Key key) {
+        ObjectVersions objectVersions = effectMap.get(key);
+        if (objectVersions != null) {
+            return objectVersions.getValue();
         } else {
             return kvs.getValue(key, dependency).getValue();
         }
@@ -87,7 +92,7 @@ public class Transaction {
         return dependency;
     }
 
-    public HashMap<String, Value> getEffectMap() {
+    public HashMap<Key, ObjectVersions> getEffectMap() {
         return effectMap;
     }
 }

@@ -2,7 +2,7 @@
 - Infinite persistent memory
 - Single database (Db)
 - Single Shard (S)
-- Multi-version, supporting concurrent versions.  A version is the mapping $(key, timestamp) \rightarrow value$
+- Multi-version, supporting concurrent versions.  A version is the mapping $(key, timestamp) \rightarrow objectVersions$
 - A timestamp is a scalar in a total-ordered isolation model (e.g., serialisable), or a vector in a partial-ordered isolation model (e.g., TCC).
 
 # Snapshot
@@ -11,7 +11,7 @@ A transaction reads from a snapshot.  A snapshot is a set of versions.  For any 
 
 The snapshot of some transaction $t$ is the mapping $key \rightarrow version$
 
-.  , i.e., it is the mapping $(key, t.start) \rightarrow value$ where $value$ is XXXXX
+.  , i.e., it is the mapping $(key, t.start) \rightarrow objectVersions$ where $objectVersions$ is XXXXX
 
 # Start Transaction
 
@@ -39,7 +39,7 @@ The transaction object.
 
 ## Returns
 
-The value of the key in the buffer if it exist, otherwise returns the value in the snapshot.
+The objectVersions of the key in the buffer if it exist, otherwise returns the objectVersions in the snapshot.
 
 
 # Effector
