@@ -271,7 +271,7 @@ that writes this object-version.
     \hline
 
     $\mathit{commit()}$     & $\mathit{State = live}$ & $\mathit{State = terminated}$\\
-    model-specific          &                         & $\mathit{Store' = Store \cup \varepsilon}$ \\
+                            & model-specific          & $\mathit{Store' = Store \cup \varepsilon}$ \\
                             &                         & $\mathit{Dt < Ct}$ \\
     \hline
 
@@ -353,12 +353,12 @@ the effects of $\varepsilon$ are valid according to the consistency model
 (under TCC+, this is always the case).
 The transaction commits only if this is true; this sets a commit
 timestamp, and moves the updates
-from the effect buffer into the store, tagged by the transactionID.
+from the effect buffer into the store, tagged by the tagged by the transaction's commit timestamp.
 If not, the transaction aborts, by simply moving to the terminated
 state.
 A transaction may also abort non-deterministically.
 
-\subsection{Bounded-Memory Version Store}
+\section{Bounded-Memory Version Store}
 
 Our next step will be to impose a bound on the size of the store.
 
@@ -370,14 +370,15 @@ We also keep track of current memory utilization represented by $\mathit{M_{used
 To simplify our model we only consider the size of the $\mathit{Store}$, running transactions does not affect the invariant.
 Based on these two variables we introduce a new system invariant:
 \begin{itemize}
-  \item \emph{$M_{used}$} $<$ \emph{$M_{limit}$}
+  \item \emph{$M_{used}$} $\leq$ \emph{$M_{limit}$}
 \end{itemize}
 
 Every time a transaction commits $\mathit{M_{used}}$ is updated to ensure that the size of the $\mathit{Store}$ does not grow beyond the limit set by the system.
 
-If the threshold is reached, the system has two possibilities regarding running transactions, abort all running transaction or halt commits until an eviction of outdated Object-Version is performed.
+If the threshold is reached, the system has two possibilities: either to abort future transactions, or to delay their commitment, until $\mathit{M_{used}}$ decreases. 
 
-For the eviction to happen safely, the system must ensure that every running transaction is able to read from its dependency snapshot.
+For $\mathit{M_{used}}$ to decreases the system needs to perform an eviction of Objet-Versions.
+For an eviction to be safe, the system must ensure that every running transaction's snapshot returns the same Object-Version for every $\mathit{key}$ before and after any eviction.
 To uphold the new system invariants, we keep track of all the dependencies of running transactions called \emph{RunningTr} but also all the commit timestamps of finished transactions \emph{CommitTr}.
 
 We then introduce a new timestamp called Minimum Dependency $\mathit{MinDt}$.
@@ -392,46 +393,9 @@ Every Object-version in the $\mathit{Store}$ that has a commit timestamp that is
 If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
 
 
-% \begin{table}
-%   \centering
-%   \begin{tabular}{|c|c|c|c|}
-%     \hline
-%     & & & \\
-%     API & Preconditions & Invariants & Postconditions\\
-%     & & & \\
-%     \hline
-%     startTransaction & $\mathit{State \neq live}$ & $\mathit{Ct \neq null => Dt > Ct}$ & $\mathit{State = live}$\\
-%     & & $\mathit{Ct = null}$ & \\
-%     \hline
-%     read & $\mathit{State = live}$ & $\mathit{R' = R \cup \{key\}}$ &\\
-%     & & $\mathit{Ct = null}$ & \\
-%     \hline
-%     effect & & $\mathit{State = live}$ & $\mathit{\varepsilon = \varepsilon \cup \{(key, \tau)\}}$ \\
-%     & & $\mathit{Ct = null}$ & \\
-%     \hline
-%     \rowcolor{lightgray} commit & $\mathit{State = live}$ & $\mathit{M_{used} < M_{limit}}$ & $\mathit{Store' = Store \cup \varepsilon}$\\
-%     \rowcolor{lightgray} & $\mathit{Ct = null}$ & & $\mathit{State = terminated}$ \\
-%     \rowcolor{lightgray} & & & $\mathit{Dt \geq Ct}$ \\
-%     \hline
-%     abort & $\mathit{State = live}$ & $\mathit{Ct = null}$ & $\mathit{State = terminated}$\\
-%     & & & \\
-%     \hline
-
-%   \end{tabular}
-%   \caption{Bounded-Memory Version Store: Asserts and invariants for each API call}
-%   \label{tab:AssertInvariantsBounded}
-% \end{table}
-
-% \subsubsection{Garbage collection}
-
-% If a client attempts to commit and the memory used invariant is violated then the system performs a garbage collection by iterating through all the Object-versions.
-% Every Object-version that has a commit timestamp that is lower than MinDt is removed from the backend.
-
-% If at the end of the Garbage Collection the memory used is still higher than all the running transactions are aborted and we advance MinDt to allow additional garbage collection.
-
 \section{Testing}
 
-To simplify testing, every implementation is built with the same client interface. 
+To simplify testing, every step of the implementation is built with the same client interface. 
 
 We start by executing a predetermined sequence of transactions and verify that the general behavior of the backend is correct.
 Once this done we run randomized tests on both systems to check if the general behavior remains correct outside predefined scenarios.
@@ -446,10 +410,9 @@ So we execute the same sequence of transaction on both versions, where for every
 Then we execute a second sequence of transaction that has dependencies lower the minDt and show the differences between the two traces.
 One execution should succeed where in the Bounded-Memory Version Store some transaction should abort.
 
-Finally, we plan on performing performance experiments to show that our design has comparable performance to ad hoc database backend.
+Finally, we plan on performing performance experiments to show that our design has comparable performance to ad-hoc database backends.
 
 \section{Conclusion}
-
 We have written several steps of the operational semantics, we have implemented the first partial versions of our design.
 Later we plan on adding the following features to the database: persistency, Unbounded Journal, Bounded journal with checkpoints and finally a cache.
 
