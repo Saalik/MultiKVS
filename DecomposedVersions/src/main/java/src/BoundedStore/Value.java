@@ -1,6 +1,6 @@
 package BoundedStore;
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
 public class Value {
     private int value;

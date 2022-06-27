@@ -1,9 +1,9 @@
 package UnboundedVersionStore;
 
-import Types.Key;
-import Types.Timestamp;
-import Types.TransactionID;
-import Types.ObjectVersions;
+import PrimitiveType.Key;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
+import PrimitiveType.ObjectVersions;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.UUID;
@@ -28,7 +28,7 @@ public class Transaction {
 
     public Transaction(KeyValueStore kvs){
         id = new TransactionID(UUID.randomUUID().toString());
-        commit = new Timestamp(Instant.MIN);
+        commit = new Timestamp(Instant.MAX);
         dependency = kvs.getLastTransactionTimestamp()  ;;
         effectMap = new HashMap<>();
         readSet = new CopyOnWriteArraySet<>();

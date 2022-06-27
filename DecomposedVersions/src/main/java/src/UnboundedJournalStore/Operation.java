@@ -1,9 +1,9 @@
-package Journal;
+package UnboundedJournalStore;
 
 
-import Types.TransactionID;
+import java.io.Serializable;
 
-public class Operation {
+public class Operation implements Serializable {
     private final String key;
     private final int value;
 

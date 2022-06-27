@@ -1,7 +1,9 @@
 package Reference;
 
 import Interfaces.KVSClient;
-import Types.TransactionID;
+import PrimitiveType.Key;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
 
 public class Client extends Thread implements KVSClient {
 
@@ -35,8 +37,8 @@ public class Client extends Thread implements KVSClient {
         }
     }
 
-    public void beginTransaction(TransactionID dependency) {
-        if (tr == null) {
+    public void beginTransaction(Timestamp dependency) {
+/*        if (tr == null) {
             if (kvs.getTransaction(dependency) != null){
                 tr = new Transaction(kvs, dependency);
             }else{
@@ -45,7 +47,17 @@ public class Client extends Thread implements KVSClient {
         }
         else {
             assert(false);
-        }
+        }*/
+    }
+
+    @Override
+    public void effect(Key key, int value) {
+
+    }
+
+    @Override
+    public int read(Key key) {
+        return 0;
     }
 
     public void effect(String key, int value){
@@ -75,6 +87,11 @@ public class Client extends Thread implements KVSClient {
     public void abort() {
         assert (tr != null);
         tr = null;
+    }
+
+    @Override
+    public void crash() {
+
     }
 
 }

@@ -1,18 +1,20 @@
-package Journal;
+package UnboundedJournalStore;
 
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
-public class Record {
+import java.io.Serializable;
+
+public class Record implements Serializable {
     public enum Type {
-        BEGIN, PREPARE, COMMIT, ABORT, OPERATION,
+        BEGIN, COMMIT, ABORT, OPERATION,
     }
     private static int cptId = 0;
     private static final Object mutex = new Object();
-    private TransactionID trId;
-    private TransactionID dependency;
+    private final TransactionID trId;
+    private final TransactionID dependency;
     private int recordId;
-    private Type type;
+    private final Type type;
     private Operation operation;
 
     public Record(TransactionID trId, TransactionID dependency, Type type) {

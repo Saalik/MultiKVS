@@ -1,4 +1,4 @@
-package Types;
+package PrimitiveType;
 
 public class Key {
     String key;

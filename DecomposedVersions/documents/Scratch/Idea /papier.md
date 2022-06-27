@@ -57,11 +57,11 @@ In our work we will consider TCC+ as our main consistency target for our databas
 
 ## Description d'un model commun
 First we talk about the structures of interest in our model.
-(Journal, Checkpoint store, Client).
+(UnboundedJournalStore, Checkpoint store, Client).
 Than we talk about the concepts that are important for correctness.
 Once we have the structures and the concept we present the APIs call that link different structures toghether and their invariants. 
 We divide our model in two main category:
-- Journal based
+- UnboundedJournalStore based
 - State based
 ### Description d'un model state base
 

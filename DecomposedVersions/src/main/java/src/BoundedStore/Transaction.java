@@ -1,7 +1,7 @@
 package BoundedStore;
 
-import Types.Timestamp;
-import Types.TransactionID;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;

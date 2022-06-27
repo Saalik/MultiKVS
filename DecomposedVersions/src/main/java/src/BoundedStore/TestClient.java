@@ -1,8 +1,8 @@
 package BoundedStore;
 
-import Journal.Client;
-import Journal.KeyValueStore;
-import Types.TransactionID;
+import UnboundedJournalStore.Client;
+import UnboundedJournalStore.KeyValueStore;
+import PrimitiveType.TransactionID;
 
 public class TestClient {
     public static void main(String[] args) {
@@ -17,54 +17,54 @@ public class TestClient {
         client.start();
 
         System.out.println("Test 1: Add a key-value pair");
-        client.beginTransaction();
+        client.begin();
         client.effect("key1", 1);
         client.effect("key2", 2);
         client.effect("key3", 3);
-        assertEqual(client.get("key1"), key1);
-        assertEqual(client.get("key2"), key2);
-        assertEqual(client.get("key3"), key3);
-        dependency1 = client.commitTransaction();
+        assertEqual(client.read("key1"), key1);
+        assertEqual(client.read("key2"), key2);
+        assertEqual(client.read("key3"), key3);
+        dependency1 = client.commit();
 
         System.out.println("Test 1 passed");
 
         System.out.println("Test 2: Add a key-value pair and then read new value");
-        client.beginTransaction();
-        assertEqual(client.get("key1"), key1);
+        client.begin();
+        assertEqual(client.read("key1"), key1);
         key1 += 4;
         client.effect("key1", 4);
-        assertEqual(client.get("key1"), key1);
-        assertEqual(client.get("key2"), key2);
-        assertEqual(client.get("key3"), key3);
-        dependency2 = client.commitTransaction();
+        assertEqual(client.read("key1"), key1);
+        assertEqual(client.read("key2"), key2);
+        assertEqual(client.read("key3"), key3);
+        dependency2 = client.commit();
 
         System.out.println("Test 2 passed");
 
         System.out.println("Test 3: Add a key-value pair and read from an older dependency");
-        client.beginTransaction();
-        assertEqual(client.get("key1"), key1);
+        client.begin();
+        assertEqual(client.read("key1"), key1);
         key1 += 4;
         client.effect("key1", 4);
-        assertEqual(client.get("key1"), key1);
-        assertEqual(client.get("key2"), key2);
-        assertEqual(client.get("key3"), key3);
-        dependency3 = client.commitTransaction();
+        assertEqual(client.read("key1"), key1);
+        assertEqual(client.read("key2"), key2);
+        assertEqual(client.read("key3"), key3);
+        dependency3 = client.commit();
 
-        client.beginTransaction(dependency2);
-        assertNotEqual(client.get("key1"), key1);
-        client.commitTransaction();
+        client.begin(dependency2);
+        assertNotEqual(client.read("key1"), key1);
+        client.commit();
         System.out.println("Test 3 passed");
 
         System.out.println("Test 4: Writing a 100 times in a single transaction");
 
-        client.beginTransaction();
+        client.begin();
         for (int i= 0; i < 100 ; i++) {
             client.effect("key4", 1);
         }
-        TransactionID dependency4 = client.commitTransaction();
+        TransactionID dependency4 = client.commit();
 
-        client.beginTransaction(dependency4);
-        assertEqual(client.get("key4"), 100);
+        client.begin(dependency4);
+        assertEqual(client.read("key4"), 100);
         client.abort();
 
         System.out.println("Test 4 passed");
@@ -73,13 +73,13 @@ public class TestClient {
 
         TransactionID dependency5 = null;
         for (int i= 0; i < 100 ; i++) {
-            client.beginTransaction();
+            client.begin();
             client.effect("key5", 1);
-            dependency5 = client.commitTransaction();
+            dependency5 = client.commit();
         }
 
-        client.beginTransaction(dependency5);
-        assertEqual(client.get("key5"), 100);
+        client.begin(dependency5);
+        assertEqual(client.read("key5"), 100);
         client.abort();
 
         System.out.println("Test 5 passed");

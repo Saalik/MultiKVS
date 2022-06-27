@@ -1,8 +1,9 @@
-package Types;
+package PrimitiveType;
 
+import java.io.Serializable;
 import java.util.UUID;
 
-public class TransactionID{
+public class TransactionID implements Serializable {
 
     private final UUID trID;
 

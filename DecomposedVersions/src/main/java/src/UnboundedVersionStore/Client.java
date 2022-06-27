@@ -1,8 +1,9 @@
 package UnboundedVersionStore;
 
 import Interfaces.KVSClient;
-import Types.Timestamp;
-import Types.TransactionID;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
+import PrimitiveType.Key;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -12,6 +13,8 @@ public class Client extends Thread implements KVSClient {
     private Timestamp lastCommit;
     private Transaction tr;
     private KeyValueStore kvs;
+
+
 
     public Client(KeyValueStore kvs) {
         this.kvs = kvs;
@@ -33,7 +36,6 @@ public class Client extends Thread implements KVSClient {
 
     }
 
-    @Override
     public void beginTransaction(Timestamp dependency) {
         checkArgument(tr == null, "Transaction already started");
         if (kvs.dependencyIsValid(dependency)){
@@ -44,15 +46,14 @@ public class Client extends Thread implements KVSClient {
         }
     }
 
-
     @Override
-    public void effect(String key, int value){
+    public void effect(Key key, int value){
         checkArgument(tr != null, "Transaction not started");
         tr.effect(key, value);
     }
 
     @Override
-    public int get(String key){
+    public int read(Key key){
         checkArgument(tr != null, "Transaction not started");
         return tr.get(key);
     }
@@ -65,7 +66,7 @@ public class Client extends Thread implements KVSClient {
             return null;
         } else {
             kvs.commitTransaction(tr);
-            lastCommit = tr.getId();
+            lastCommit = tr.getCommit();
             tr = null;
             return lastCommit;
         }
@@ -76,5 +77,8 @@ public class Client extends Thread implements KVSClient {
         checkArgument(tr != null, "Transaction not started");
         tr = null;
     }
+
+    @Override
+    public void crash(){}
 
 }

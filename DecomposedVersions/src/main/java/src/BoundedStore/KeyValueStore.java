@@ -1,7 +1,7 @@
 package BoundedStore;
 
-import Types.Timestamp;
-import Types.TransactionID;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.graph.GraphBuilder;

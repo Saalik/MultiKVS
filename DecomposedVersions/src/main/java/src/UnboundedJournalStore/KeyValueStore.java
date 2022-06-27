@@ -1,31 +1,61 @@
-package Journal;
+package UnboundedJournalStore;
 
+import PrimitiveType.TransactionID;
 
-
-import Types.TransactionID;
-
+import java.io.*;
 import java.util.ArrayList;
 
-public class KeyValueStore {
+public class KeyValueStore  {
     // Here the Backend is a Journal
     ArrayList<Record> backend;
     TransactionID lastTransactionID;
+    String JOURNAL = "UnboundedJournal";
 
     public KeyValueStore() {
-        backend = new ArrayList<>();
+        if (!recovery()){
+            System.exit(1);
+        }
         lastTransactionID = null;
     }
 
-    public void commitTransaction(Transaction tr) {
-        TransactionID trId = tr.getId();
+    public synchronized void put(Record record) {
+        try {
+            FileOutputStream fos = new FileOutputStream(JOURNAL);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(record);
+            oos.close();
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void commit(Transaction tr) {
+        TransactionID trId = tr.getTransactionID();
         TransactionID dependency = tr.getDependency();
-        backend.add(new Record(tr.getId(), tr.getDependency(), Record.Type.BEGIN));
+        backend.add(new Record(tr.getTransactionID(), tr.getDependency(), Record.Type.BEGIN));
         for (Operation ope : tr.getOperations()){
             //System.out.println("Adding "+ope.toString());
             backend.add(new Record(trId, dependency, Record.Type.OPERATION, ope.getKey(), ope.getValue()));
         }
-        backend.add(new Record(tr.getId(), tr.getDependency(), Record.Type.COMMIT));
-        lastTransactionID = tr.getId();
+        Record commitRecord = new Record(tr.getTransactionID(), tr.getDependency(), Record.Type.COMMIT);
+        synchronized (this) {
+            try {
+                FileOutputStream fos = new FileOutputStream(JOURNAL);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(commitRecord);
+                oos.close();
+                fos.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        backend.add(commitRecord);
+        lastTransactionID = tr.getTransactionID();
     }
 
     public TransactionID getLastTransactionID() {
@@ -47,7 +77,7 @@ public class KeyValueStore {
                 '}';
     }
 
-    public int getKey(String key, TransactionID dependency) {
+    public int lookup(String key, TransactionID dependency) {
         boolean commit_seen = false;
         int counter = 0;
         for (int i = backend.size()-1; i > 0 ; i-- ) {
@@ -81,6 +111,31 @@ public class KeyValueStore {
             }
         }
         return false;
+
+    }
+
+    public boolean recovery () {
+        FileInputStream fis = null;
+        ObjectInputStream ois = null;
+        try {
+            fis = new FileInputStream(JOURNAL);
+            ois = new ObjectInputStream(fis);
+            backend = (ArrayList<Record>) ois.readObject();
+            ois.close();
+            fis.close();
+            return true;
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+
 
     }
 }

@@ -1,4 +1,4 @@
-package Types;
+package PrimitiveType;
 
 import java.time.Instant;
 

@@ -1,6 +1,8 @@
 package BoundedStore;
 import Interfaces.KVSClient;
-import Types.TransactionID;
+import PrimitiveType.Key;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -23,32 +25,45 @@ public class Client extends Thread implements KVSClient {
     @Override
     public void beginTransaction() {
         checkArgument(tr == null, "Transaction already started");
-        if (lastTransactionID == null) {
+/*        if (lastTransactionID == null) {
             tr = new Transaction(kvs);
         } else {
             tr = new Transaction(kvs, lastTransactionID);
-        }
+        }*/
 
     }
 
     @Override
-    public void beginTransaction(TransactionID dependency) {
+    public void beginTransaction(Timestamp dependency) {
         checkArgument(tr == null, "Transaction already started");
-        if (kvs.transactionIDExist(dependency)){
+/*        if (kvs.transactionIDExist(dependency)){
             tr = new Transaction(kvs, dependency);
         }else{
             System.out.println("MemoryKVS.Transaction does not exist ! Please retry with a correct transaction identifier");
-        }
+        }*/
     }
 
+    @Override
+    public void effect(Key key, int value) {
+
+    }
 
     @Override
+    public int read(Key key) {
+        return 0;
+    }
+
+    @Override
+    public void crash() {
+
+    }
+
     public void effect(String key, Value value){
         checkArgument(tr != null, "Transaction not started");
         tr.effect(key, value);
     }
 
-    @Override
+
     public int get(String key){
         checkArgument(tr != null, "Transaction not started");
         return tr.get(key);
@@ -64,7 +79,7 @@ public class Client extends Thread implements KVSClient {
             kvs.commitTransaction(tr);
             lastTransactionID = tr.getId();
             tr = null;
-            return lastTransactionID;
+            return null;
         }
     }
 

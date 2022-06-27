@@ -1,8 +1,9 @@
 package UnboundedReference;
 
-import Types.Timestamp;
-import Types.TransactionID;
-import Types.ObjectVersions;
+import PrimitiveType.Key;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
+import PrimitiveType.ObjectVersions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.graph.GraphBuilder;
@@ -36,11 +37,11 @@ public class KeyValueStore {
             dependencyGraph.putEdge(transaction.getDependency(), transaction.getCommit());
         }
 
-        HashMap<String, ObjectVersions> operations = transaction.getEffectMap();
+        HashMap<Key, ObjectVersions> operations = transaction.getEffectMap();
 
-        for (String key : operations.keySet()) {
+/*        for (Key key : operations.keySet()) {
             backend.put(key, operations.get(key));
-        }
+        }*/
     }
 
     public ObjectVersions getValue (String key, Timestamp dependency) {
@@ -74,7 +75,9 @@ public class KeyValueStore {
         return lastTransactionTimestamp;
     }
 
-    public boolean dependencyIsValid(TransactionID transactionID) {
+    public boolean dependencyIsValid(Timestamp transactionID) {
+        System.out.println(this.getClass().getName() + " I'm dead");
+        assert false;
         return dependencyGraph.nodes().contains(transactionID);
     }
 

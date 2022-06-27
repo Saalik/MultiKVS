@@ -1,11 +1,11 @@
 package Reference;
 
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
 public class TestClient {
     public static void main(String[] args) {
-        KeyValueStore kvs = new KeyValueStore();
+        /*KeyValueStore kvs = new KeyValueStore();
         Client client = new Client(kvs);
         TransactionID dependency1 ;
         TransactionID dependency2 ;
@@ -68,7 +68,7 @@ public class TestClient {
         client.abort();
 
         System.out.println("Test 4 passed");
-
+*/
 //        System.out.println("Test 5: Writing a 100 times in different transactions");
 //
 //        TransactionID dependency5 = null;
@@ -84,14 +84,14 @@ public class TestClient {
 //
 //        System.out.println("Test 5 passed");
 
-        client.interrupt();
+/*        client.interrupt();
         try {
             client.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        System.out.println("Journal: Test finished");
+        System.out.println("Journal: Test finished");*/
 
     }
 

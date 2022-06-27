@@ -1,6 +1,6 @@
 package UnboundedReference;
 import Interfaces.KVSClient;
-import Types.*;
+import PrimitiveType.*;
 import static com.google.common.base.Preconditions.checkArgument;
 
 
@@ -31,6 +31,21 @@ public class Client extends Thread implements KVSClient {
     }
 
     @Override
+    public void beginTransaction(Timestamp dependency) {
+
+    }
+
+    @Override
+    public void effect(Key key, int value) {
+
+    }
+
+    @Override
+    public int read(Key key) {
+        return 0;
+    }
+
+
     public void beginTransaction(TransactionID transactionID) {
         checkArgument(tr == null, "Transaction already started");
         if (kvs.dependencyIsValid(dependency)){
@@ -41,14 +56,12 @@ public class Client extends Thread implements KVSClient {
         }
     }
 
-
-    @Override
     public void effect(String key, int value){
         checkArgument(tr != null, "Transaction not started");
-        tr.effect(key, value);
+/*        tr.effect(key, value);*/
     }
 
-    @Override
+
     public int get(String key){
         checkArgument(tr != null, "Transaction not started");
         return tr.get(key);
@@ -57,7 +70,7 @@ public class Client extends Thread implements KVSClient {
     @Override
     public TransactionID commitTransaction(){
         checkArgument(tr != null, "Transaction not started");
-        if (tr.getEffectMap().isEmpty()){
+/*        if (tr.getEffectMap().isEmpty()){
             System.out.println("Nothing to commit");
             return null;
         } else {
@@ -65,13 +78,19 @@ public class Client extends Thread implements KVSClient {
             lastCommit = tr.getId();
             tr = null;
             return lastCommit;
-        }
+        }*/
+        return null;
     }
 
     @Override
     public void abort() {
         checkArgument(tr != null, "Transaction not started");
         tr = null;
+    }
+
+    @Override
+    public void crash() {
+
     }
 
 }

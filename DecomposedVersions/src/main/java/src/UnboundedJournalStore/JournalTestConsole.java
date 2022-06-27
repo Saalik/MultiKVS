@@ -1,7 +1,7 @@
-package Journal;
+package UnboundedJournalStore;
 
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
 import java.util.Scanner;
 
@@ -9,7 +9,7 @@ public class JournalTestConsole {
 
     public static void main(String[] args) {
 
-        KeyValueStore kvs = new KeyValueStore();
+      /*  KeyValueStore kvs = new KeyValueStore();
         TransactionID lastTransactionID = null;
         Transaction tr = null;
 
@@ -66,7 +66,7 @@ public class JournalTestConsole {
                     if (tr.getOperations().isEmpty()) {
                         System.out.println("Nothing to commit");
                     } else {
-                        kvs.commitTransaction(tr);
+                        kvs.commit(tr);
                         lastTransactionID = tr.getId();
                         tr = null;
                     }
@@ -99,11 +99,11 @@ public class JournalTestConsole {
                     tr = new Transaction(kvs, lastTransactionID);
                 }
                 tr.put("hello", 3);
-                kvs.commitTransaction(tr);
+                kvs.commit(tr);
             } else {
                 System.out.println("Command error");
             }
-        }
+        }*/
     }
 }
 

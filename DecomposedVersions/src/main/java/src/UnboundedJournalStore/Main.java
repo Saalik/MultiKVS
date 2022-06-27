@@ -1,7 +1,7 @@
-package Journal;
+package UnboundedJournalStore;
 
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
 import java.io.IOException;
 import java.util.Scanner;
@@ -9,7 +9,7 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) throws IOException {
-        KeyValueStore kvs = new KeyValueStore();
+/*        KeyValueStore kvs = new KeyValueStore();
         TransactionID lastTransactionID = null;
         Transaction tr = null;
         System.out.println("You can type help to get commands");
@@ -73,7 +73,7 @@ public class Main {
                     if (tr.getOperations().isEmpty()){
                         System.out.println("Nothing to commit");
                     } else {
-                        kvs.commitTransaction(tr);
+                        kvs.commit(tr);
                         lastTransactionID = tr.getId();
                         tr = null;
                     }
@@ -113,7 +113,7 @@ public class Main {
                 }
                 tr.put("hello", 3);
                 tr.put("hello", 4);
-                kvs.commitTransaction(tr);
+                kvs.commit(tr);
                 lastTransactionID = tr.getId();
                 if (lastTransactionID == null) {
                     tr = new Transaction(kvs);
@@ -127,6 +127,6 @@ public class Main {
                 System.out.println("Command error");
             }
 
-        }
+        }*/
     }
 }

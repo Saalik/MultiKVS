@@ -1,13 +1,12 @@
 package UnboundedVersionStore;
 
-import Types.Timestamp;
-import Types.TransactionID;
-import Types.ObjectVersions;
-import Types.Key;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
+import PrimitiveType.ObjectVersions;
+import PrimitiveType.Key;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.graph.GraphBuilder;
-import com.google.common.graph.MutableGraph;
+
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -40,18 +39,22 @@ public class KeyValueStore {
     public void commitTransaction (Transaction transaction) {
 
         transaction.setCommit(new Timestamp());
-//        index.put(transaction.getCommit(), transaction.getId());
-//        dependencyGraph.addNode(transaction.getCommit());
-//        if (transaction.getDependency() != null) {
-//            dependencyGraph.putEdge(transaction.getDependency(), transaction.getCommit());
-//        }
         HashMap<Key, ObjectVersions> operations = transaction.getEffectMap();
         for (Key key : operations.keySet()) {
+            operations.get(key).setCommitTimestamp(transaction.getCommit());
             store.put(key, operations.get(key));
         }
         commitedTransactions.add(transaction.getId());
     }
 
+    /**
+     * getValue Returns if present the most recent version
+     *
+     *
+     * @param key
+     * @param dependency
+     * @return
+     */
     public ObjectVersions getValue (Key key, Timestamp dependency) {
         boolean stopSearch = false;
         Timestamp dependencyTimestamp = dependency;

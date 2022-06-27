@@ -1,14 +1,15 @@
-package Journal;
-import Interfaces.KVSClient;
+package UnboundedJournalStore;
 import static com.google.common.base.Preconditions.checkArgument;
 
-import Types.*;
+import PrimitiveType.*;
 
-public class Client extends Thread implements KVSClient {
+import java.io.IOException;
+
+public class Client extends Thread {
     private TransactionID dependency;
     private TransactionID lastTransactionID;
     private Transaction tr;
-    private KeyValueStore kvs;
+    private final KeyValueStore kvs;
 
     public Client(KeyValueStore kvs) {
         this.kvs = kvs;
@@ -24,7 +25,10 @@ public class Client extends Thread implements KVSClient {
         }
     }
 
-    public void beginTransaction() {
+    /*
+        - Starts transaction with any valid dependency
+     */
+    public void begin() {
         checkArgument(tr == null, "Transaction already started");
         if (lastTransactionID == null) {
             tr = new Transaction(kvs);
@@ -34,12 +38,15 @@ public class Client extends Thread implements KVSClient {
 
     }
 
-    public void beginTransaction(TransactionID dependency) {
+    /*
+        - Starts transaction with specified dependency
+     */
+    public void begin(TransactionID dependency) {
         checkArgument(tr == null, "Transaction already started");
         if (kvs.getTransaction(dependency) == true){
             tr = new Transaction(kvs, dependency);
         }else{
-            System.out.println("MemoryKVS.Transaction does not exist ! Please retry with a correct transaction identifier");
+            System.out.println("Dependency does not exist ! Please retry with a correct transaction identifier");
         }
     }
 
@@ -49,21 +56,20 @@ public class Client extends Thread implements KVSClient {
         tr.put(key, value);
     }
 
-    public int get(String key){
+    public int read(String key){
         checkArgument(tr != null, "Transaction not started");
         return tr.get(key);
     }
 
-    public TransactionID commitTransaction (){
-        // CheckArgument == Assertion
+    public TransactionID commit() {
         checkArgument(tr != null, "Transaction not started");
         if (tr.getOperations().isEmpty()){
             System.out.println("Nothing to commit");
             tr = null;
             return lastTransactionID;
         } else {
-            kvs.commitTransaction(tr);
-            lastTransactionID = tr.getId();
+            kvs.commit(tr);
+            lastTransactionID = tr.getTransactionID();
             tr = null;
             return lastTransactionID;
         }

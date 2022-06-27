@@ -1,6 +1,7 @@
 package Reference;
 
-import Types.TransactionID;
+import PrimitiveType.Timestamp;
+import PrimitiveType.TransactionID;
 
 import java.util.HashMap;
 
@@ -25,7 +26,7 @@ public class KeyValueStore {
         return lastTransactionID;
     }
 
-    public Transaction getTransaction(TransactionID trID) {
+    public Transaction getTransaction(Timestamp trID) {
         if (backend.containsKey(trID)) {
             return backend.get(trID);
         }else{

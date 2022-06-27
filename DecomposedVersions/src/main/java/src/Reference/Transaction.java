@@ -1,6 +1,6 @@
 package Reference;
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
 import java.util.HashMap;
 import java.util.UUID;

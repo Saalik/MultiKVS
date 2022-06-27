@@ -1,4 +1,4 @@
-package Types;
+package PrimitiveType;
 
 import javax.annotation.Nullable;
 

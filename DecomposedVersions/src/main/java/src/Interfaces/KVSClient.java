@@ -1,7 +1,9 @@
 package Interfaces;
 
-import Bounded.Value;
-import Types.TransactionID;
+
+import PrimitiveType.Timestamp;
+import PrimitiveType.Key;
+import PrimitiveType.TransactionID;
 
 public interface KVSClient {
 
@@ -14,16 +16,19 @@ public interface KVSClient {
 
     /** Precondition:
      *  The snapshot is valid in regards to the consistency model
+     * @param dependency
      */
-    void beginTransaction(TransactionID dependency);
+    void beginTransaction(Timestamp dependency);
 
 
-    void effect(String key, Value value);
+    void effect(Key key, int value);
 
-    int get(String key);
+    int read(Key key);
 
 
     TransactionID commitTransaction();
 
     void abort();
+
+    void crash();
 }

@@ -1,6 +1,6 @@
 package Reference;
 
-import Types.TransactionID;
+import PrimitiveType.TransactionID;
 
 import java.io.IOException;
 import java.util.Scanner;
